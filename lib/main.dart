@@ -3,17 +3,19 @@ import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MuhasibiApp());
+  runApp(const MuhasibiUniversalApp());
 }
 
-class MuhasibiApp extends StatefulWidget {
-  const MuhasibiApp({super.key});
+class MuhasibiUniversalApp extends StatefulWidget {
+  const MuhasibiUniversalApp({super.key});
 
   @override
-  State<MuhasibiApp> createState() => _MuhasibiAppState();
+  State<MuhasibiUniversalApp> createState() =>
+      _MuhasibiUniversalAppState();
 }
 
-class _MuhasibiAppState extends State<MuhasibiApp> {
+class _MuhasibiUniversalAppState
+    extends State<MuhasibiUniversalApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _arabicDigits = false;
   String _fontMode = 'system';
@@ -28,7 +30,7 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'محاسبي',
+      title: 'محاسبي الشامل',
       themeMode: _themeMode,
       theme: _theme(
         brightness: Brightness.light,
@@ -44,7 +46,7 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: MuhasibiHome(
+      home: MuhasibiDashboard(
         themeMode: _themeMode,
         arabicDigits: _arabicDigits,
         fontMode: _fontMode,
@@ -75,8 +77,10 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
         brightness: brightness,
       ),
       scaffoldBackgroundColor:
-          dark ? const Color(0xFF101716) : const Color(0xFFF4F8F6),
-      textTheme: (dark ? Typography.material2021().white : Typography.material2021().black)
+          dark ? const Color(0xFF101716) : const Color(0xFFF5F8F7),
+      textTheme: (dark
+              ? Typography.material2021().white
+              : Typography.material2021().black)
           .apply(fontFamily: fontFamily),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -105,16 +109,18 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
 class AppColors {
   static const Color emerald = Color(0xFF00695C);
   static const Color emeraldDark = Color(0xFF004D40);
-  static const Color emeraldLight = Color(0xFF19A78C);
+  static const Color emeraldLight = Color(0xFF1AA78E);
   static const Color danger = Color(0xFFB91C1C);
   static const Color success = Color(0xFF15803D);
   static const Color muted = Color(0xFF68736F);
-  static const Color gold = Color(0xFFE4B63C);
+  static const Color gold = Color(0xFFE2B53C);
 }
 
 enum TransactionType {
   income,
   expense,
+  transferOut,
+  transferIn,
 }
 
 enum LedgerType {
@@ -123,40 +129,60 @@ enum LedgerType {
   worker,
 }
 
-class WalletFolder {
-  WalletFolder({
+class FinancialSection {
+  FinancialSection({
     required this.id,
-    required this.title,
-    required this.icon,
+    required this.name,
+    required this.description,
+    required this.currency,
     required this.color,
-    this.balance = 0.0,
+    required this.icon,
+    this.openingBalance = 0.0,
   });
 
   final String id;
-  final String title;
-  final IconData icon;
-  final Color color;
-  double balance;
+  String name;
+  String description;
+  String currency;
+  Color color;
+  IconData icon;
+  double openingBalance;
 }
 
-class TransactionRecord {
-  TransactionRecord({
+class FinancialTransaction {
+  FinancialTransaction({
     required this.id,
+    required this.sectionId,
     required this.title,
-    required this.category,
-    required this.dateLabel,
-    required this.notes,
-    required this.amount,
     required this.type,
+    required this.amount,
+    required this.currency,
+    required this.dateLabel,
+    required this.category,
+    required this.counterparty,
+    required this.place,
+    required this.reason,
+    required this.paymentMethod,
+    required this.referenceNumber,
+    required this.notes,
+    required this.labels,
   });
 
   final String id;
+  final String sectionId;
   final String title;
-  final String category;
-  final String dateLabel;
-  final String notes;
-  final double amount;
   final TransactionType type;
+  final double amount;
+  final String currency;
+  final String dateLabel;
+  final String category;
+  final String counterparty;
+  final String place;
+  final String reason;
+  final String paymentMethod;
+  final String referenceNumber;
+  final String notes;
+  final List<String> labels;
 }
 
 class LedgerEntry {
@@ -165,25 +191,71 @@ class LedgerEntry {
     required this.name,
     required this.phone,
     required this.type,
-    required this.balance,
+    required this.credit,
+    required this.debit,
+    required this.currency,
     required this.notes,
-    required this.dateLabel,
   });
 
   final String id;
   String name;
 
-  // Nullable intentionally; every usage is protected with ?? ''.
+  // Nullable safely. WhatsApp processing uses phone ?? ''.
   String? phone;
 
   LedgerType type;
-  double balance;
+  double credit;
+  double debit;
+  String currency;
   String notes;
-  String dateLabel;
+
+  double get balance => credit - debit;
 }
 
-class MuhasibiHome extends StatefulWidget {
-  const MuhasibiHome({
+class ChildGoal {
+  ChildGoal({
+    required this.id,
+    required this.childName,
+    required this.goalName,
+    required this.target,
+    this.saved = 0.0,
+    this.rewardPoints = 0.0,
+  });
+
+  final String id;
+  final String childName;
+  final String goalName;
+  final double target;
+  double saved;
+  double rewardPoints;
+
+  double get progress {
+    if (target <= 0.0) {
+      return 0.0;
+    }
+
+    return (saved / target).clamp(0.0, 1.0);
+  }
+}
+
+class InventoryItem {
+  InventoryItem({
+    required this.id,
+    required this.name,
+    required this.unitPrice,
+    this.quantity = 0.0,
+    this.minimumQuantity = 0.0,
+  });
+
+  final String id;
+  final String name;
+  final double unitPrice;
+  double quantity;
+  double minimumQuantity;
+}
+
+class MuhasibiDashboard extends StatefulWidget {
+  const MuhasibiDashboard({
     super.key,
     required this.themeMode,
     required this.arabicDigits,
@@ -201,82 +273,98 @@ class MuhasibiHome extends StatefulWidget {
   final ValueChanged<String> onFontChanged;
 
   @override
-  State<MuhasibiHome> createState() => _MuhasibiHomeState();
+  State<MuhasibiDashboard> createState() =>
+      _MuhasibiDashboardState();
 }
 
-class _MuhasibiHomeState extends State<MuhasibiHome> {
+class _MuhasibiDashboardState extends State<MuhasibiDashboard> {
   int _tabIndex = 0;
-  bool _selectMode = false;
-  final Set<String> _selectedTransactions = <String>{};
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = <String>{};
 
-  final String _ownerWhatsApp = '967775592894';
   String _profileName = 'أبو علي لقمان';
   String _profilePhone = '967775592894';
-  String _avatarLetters = 'AL';
+  String _profileAvatar = 'AL';
 
   double _yerPerSar = 140.0;
   double _yerPerUsd = 535.0;
   double _expenseThreshold = 100000.0;
 
-  // Clean-slate wallet folders: all balances start at absolute zero.
-  final List<WalletFolder> _wallets = <WalletFolder>[
-    WalletFolder(
-      id: 'daily',
-      title: 'المصروفات اليومية',
-      icon: Icons.shopping_basket_rounded,
-      color: const Color(0xFF0284C7),
-      balance: 0.0,
-    ),
-    WalletFolder(
-      id: 'jamiya',
-      title: 'الجمعية والادخار',
-      icon: Icons.savings_rounded,
-      color: const Color(0xFF7C3AED),
-      balance: 0.0,
-    ),
-    WalletFolder(
-      id: 'strategic',
-      title: 'الادخار الاستراتيجي',
-      icon: Icons.trending_up_rounded,
-      color: const Color(0xFF0F766E),
-      balance: 0.0,
-    ),
-  ];
+  final List<FinancialSection> _sections = <FinancialSection>[];
+  final List<FinancialTransaction> _transactions =
+      <FinancialTransaction>[];
 
-  // Clean-slate dynamic arrays: absolutely empty on first launch.
   final List<LedgerEntry> _clients = <LedgerEntry>[];
   final List<LedgerEntry> _vendors = <LedgerEntry>[];
   final List<LedgerEntry> _workers = <LedgerEntry>[];
-  final List<TransactionRecord> _transactions = <TransactionRecord>[];
 
-  double get _netBalance {
-    return _wallets.fold<double>(
-      0.0,
-      (double total, WalletFolder wallet) => total + wallet.balance,
-    );
-  }
+  final List<ChildGoal> _childGoals = <ChildGoal>[];
+  final List<InventoryItem> _inventory = <InventoryItem>[];
 
   double get _totalIncome {
     return _transactions
-        .where((TransactionRecord item) => item.type == TransactionType.income)
+        .where(
+          (FinancialTransaction item) =>
+              item.type == TransactionType.income ||
+              item.type == TransactionType.transferIn,
+        )
         .fold<double>(
           0.0,
-          (double total, TransactionRecord item) => total + item.amount,
+          (double sum, FinancialTransaction item) => sum + item.amount,
         );
   }
 
   double get _totalExpenses {
     return _transactions
-        .where((TransactionRecord item) => item.type == TransactionType.expense)
+        .where(
+          (FinancialTransaction item) =>
+              item.type == TransactionType.expense ||
+              item.type == TransactionType.transferOut,
+        )
         .fold<double>(
           0.0,
-          (double total, TransactionRecord item) => total + item.amount,
+          (double sum, FinancialTransaction item) => sum + item.amount,
         );
   }
 
-  bool get _financialLeak => _totalExpenses > _expenseThreshold;
+  bool get _hasLeak => _totalExpenses > _expenseThreshold;
 
-  List<LedgerEntry> _ledgerFor(LedgerType type) {
+  double sectionBalance(FinancialSection section) {
+    final double entered = _transactions
+        .where(
+          (FinancialTransaction item) =>
+              item.sectionId == section.id &&
+              (item.type == TransactionType.income ||
+                  item.type == TransactionType.transferIn),
+        )
+        .fold<double>(
+          0.0,
+          (double sum, FinancialTransaction item) => sum + item.amount,
+        );
+
+    final double exited = _transactions
+        .where(
+          (FinancialTransaction item) =>
+              item.sectionId == section.id &&
+              (item.type == TransactionType.expense ||
+                  item.type == TransactionType.transferOut),
+        )
+        .fold<double>(
+          0.0,
+          (double sum, FinancialTransaction item) => sum + item.amount,
+        );
+
+    return section.openingBalance + entered - exited;
+  }
+
+  String money(double amount) {
+    return formatMoney(
+      amount,
+      arabicDigits: widget.arabicDigits,
+    );
+  }
+
+  List<LedgerEntry> ledgerList(LedgerType type) {
     switch (type) {
       case LedgerType.client:
         return _clients;
@@ -287,18 +375,7 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
     }
   }
 
-  WalletFolder _walletById(String id) {
-    return _wallets.firstWhere((WalletFolder item) => item.id == id);
-  }
-
-  String _money(double value) {
-    return formatAmount(
-      value,
-      arabicDigits: widget.arabicDigits,
-    );
-  }
-
-  void _snack(String message, {bool error = false}) {
+  void snack(String message, {bool error = false}) {
     if (!mounted) {
       return;
     }
@@ -314,124 +391,144 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
       );
   }
 
-  void _allocateSalary({
-    required double amount,
-    required String title,
-    required String dateLabel,
-    required String notes,
+  void addSection({
+    required String name,
+    required String description,
+    required String currency,
   }) {
-    if (!amount.isFinite || amount <= 0.0) {
-      _snack('أدخل مبلغ دخل صالح أكبر من صفر.', error: true);
+    if (name.trim().isEmpty) {
+      snack('اكتب اسم القسم أولاً.', error: true);
       return;
     }
 
-    final double jamiyaAmount = amount >= 20000.0 ? 20000.0 : amount;
-    final double afterJamiya = amount - jamiyaAmount;
-    final double dailyAmount = afterJamiya >= 50000.0 ? 50000.0 : afterJamiya;
-    final double strategicAmount = afterJamiya - dailyAmount;
-
     setState(() {
-      _walletById('jamiya').balance += jamiyaAmount;
-      _walletById('daily').balance += dailyAmount;
-      _walletById('strategic').balance += strategicAmount;
-
-      _transactions.insert(
-        0,
-        TransactionRecord(
+      _sections.add(
+        FinancialSection(
           id: DateTime.now().microsecondsSinceEpoch.toString(),
-          title: title.trim().isEmpty ? 'دخل وارد' : title.trim(),
-          category: 'دخل وتوزيع تلقائي',
-          dateLabel:
-              dateLabel.trim().isEmpty ? 'تاريخ مُدخل يدوياً' : dateLabel.trim(),
-          notes: notes.trim().isEmpty
-              ? 'الجمعية: ${_money(jamiyaAmount)}، اليومي: ${_money(dailyAmount)}، الاستراتيجي: ${_money(strategicAmount)}.'
-              : notes.trim(),
-          amount: amount,
-          type: TransactionType.income,
+          name: name.trim(),
+          description: description.trim(),
+          currency: currency.trim().isEmpty ? 'YER' : currency.trim(),
+          color: AppColors.emerald,
+          icon: Icons.account_balance_wallet_rounded,
+          openingBalance: 0.0,
         ),
       );
     });
 
-    _snack(
-      'تم التوزيع الذكي: جمعية ${_money(jamiyaAmount)}، يومي ${_money(dailyAmount)}، استراتيجي ${_money(strategicAmount)} ريال.',
-    );
+    snack('تم إنشاء القسم "${name.trim()}" برصيد صفر.');
   }
 
-  void _addTransaction({
-    required String title,
-    required String category,
-    required String dateLabel,
-    required String notes,
-    required double amount,
-    required TransactionType type,
-  }) {
-    if (!amount.isFinite || amount < 0.0) {
-      _snack('المبلغ المدخل غير صالح.', error: true);
+  void addTransaction(FinancialTransaction transaction) {
+    if (!transaction.amount.isFinite || transaction.amount < 0.0) {
+      snack('المبلغ غير صالح.', error: true);
       return;
     }
 
     setState(() {
-      _transactions.insert(
-        0,
-        TransactionRecord(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          title: title.trim().isEmpty ? 'عملية مالية' : title.trim(),
-          category: category.trim().isEmpty ? 'عام' : category.trim(),
-          dateLabel:
-              dateLabel.trim().isEmpty ? 'تاريخ مُدخل يدوياً' : dateLabel.trim(),
-          notes: notes.trim(),
-          amount: amount,
-          type: type,
-        ),
-      );
+      _transactions.insert(0, transaction);
     });
 
-    if (type == TransactionType.expense && _financialLeak) {
-      _snack(
-        'تنبيه تسرب مالي: المصروفات تجاوزت الحد المالي المحدد.',
+    if (transaction.type == TransactionType.expense && _hasLeak) {
+      snack(
+        'تنبيه تسرب مالي: تجاوزت المصروفات حد الأمان.',
         error: true,
       );
     } else {
-      _snack('تمت إضافة العملية بنجاح.');
+      snack('تمت إضافة العملية بنجاح.');
     }
   }
 
-  Future<void> _sendDebtReminder(LedgerEntry entry) async {
-    // ─────────────────────────────────────────────────────────────
-    // The Codemagic null-safety fix:
-    // entry.phone is String?, but normalizeYemeniPhone requires String.
-    // Therefore null becomes an empty strict String before evaluation.
-    // ─────────────────────────────────────────────────────────────
-    final String normalizedPhone = normalizeYemeniPhone(entry.phone ?? '');
+  void transfer({
+    required FinancialSection from,
+    required FinancialSection to,
+    required double amount,
+    required String description,
+  }) {
+    if (amount <= 0.0 || !amount.isFinite) {
+      snack('أدخل مبلغ تحويل صالح.', error: true);
+      return;
+    }
+
+    if (sectionBalance(from) < amount) {
+      snack('رصيد القسم المصدر غير كافٍ للتحويل.', error: true);
+      return;
+    }
+
+    final String transferId =
+        DateTime.now().microsecondsSinceEpoch.toString();
+
+    setState(() {
+      _transactions.insertAll(
+        0,
+        <FinancialTransaction>[
+          FinancialTransaction(
+            id: '${transferId}_out',
+            sectionId: from.id,
+            title: 'تحويل إلى ${to.name}',
+            type: TransactionType.transferOut,
+            amount: amount,
+            currency: from.currency,
+            dateLabel: DateTime.now().toString(),
+            category: 'تحويل داخلي',
+            counterparty: to.name,
+            place: '',
+            reason: description,
+            paymentMethod: 'تحويل داخلي',
+            referenceNumber: transferId,
+            notes: description,
+            labels: <String>['تحويل'],
+          ),
+          FinancialTransaction(
+            id: '${transferId}_in',
+            sectionId: to.id,
+            title: 'تحويل من ${from.name}',
+            type: TransactionType.transferIn,
+            amount: amount,
+            currency: to.currency,
+            dateLabel: DateTime.now().toString(),
+            category: 'تحويل داخلي',
+            counterparty: from.name,
+            place: '',
+            reason: description,
+            paymentMethod: 'تحويل داخلي',
+            referenceNumber: transferId,
+            notes: description,
+            labels: <String>['تحويل'],
+          ),
+        ],
+      );
+    });
+
+    snack('تم تحويل ${money(amount)} من ${from.name} إلى ${to.name}.');
+  }
+
+  Future<void> sendReminder(LedgerEntry entry) async {
+    // Important Codemagic null-safety correction:
+    final String normalizedPhone =
+        normalizeYemeniPhone(entry.phone ?? '');
 
     if (normalizedPhone.isEmpty) {
-      _snack(
-        'رقم واتساب غير صالح. أدخل رقمًا يمنيًا صحيحًا يبدأ بـ 967.',
+      snack(
+        'رقم واتساب غير صالح. اكتب رقمًا يمنيًا يبدأ بـ 967.',
         error: true,
       );
       return;
     }
 
-    final String contactName = entry.name.trim().isEmpty
-        ? 'العميل'
-        : entry.name.trim();
-
     final String message = '''
-مرحباً $contactName،
-تفاصيل الحساب المالي المتبقي لديكم: ${_money(entry.balance)} ريال يمني.
-الوصف: ${entry.notes}
-التاريخ: ${entry.dateLabel}
+مرحباً ${entry.name}،
+تفاصيل الحساب المالي المتبقي لديكم حالياً: ${money(entry.balance.abs())} ${entry.currency}.
 صُنع وتم الابتكار بواسطة المطور مالك النظام أبو علي لقمان للتواصل هاتف: 0967775592894
 ''';
 
-    final Uri whatsappUri = Uri.https(
+    final Uri url = Uri.https(
       'wa.me',
       '/$normalizedPhone',
       <String, String>{'text': message},
     );
 
     final bool opened = await launchUrl(
-      whatsappUri,
+      url,
       mode: LaunchMode.externalApplication,
     );
 
@@ -440,685 +537,82 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
     }
 
     if (!opened) {
-      _snack(
-        'تعذر فتح WhatsApp. تأكد من تثبيت التطبيق وصحة الرقم.',
-        error: true,
-      );
+      snack('تعذر فتح WhatsApp.', error: true);
     }
   }
 
-  Future<void> _sendCloudBackup() async {
-    final String normalizedPhone = normalizeYemeniPhone(_ownerWhatsApp);
-
-    if (normalizedPhone.isEmpty) {
-      _snack('رقم النسخة الاحتياطية غير صالح.', error: true);
-      return;
-    }
-
-    final String backup = '''
-نسخة احتياطية من محاسبي
-المالك: $_profileName
-الهاتف: $_profilePhone
-================================
-صافي الرصيد: ${_money(_netBalance)} ريال يمني
-إجمالي الدخل: ${_money(_totalIncome)} ريال يمني
-إجمالي المصروفات: ${_money(_totalExpenses)} ريال يمني
-================================
-المحافظ:
-${_wallets.map((WalletFolder item) => '- ${item.title}: ${_money(item.balance)} ريال').join('\n')}
-================================
-العملاء: ${_clients.length}
-الموردون: ${_vendors.length}
-العمال: ${_workers.length}
-السجلات: ${_transactions.length}
-================================
-© 2026 جميع الحقوق محفوظة لـ محاسبي
-صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان
-''';
-
-    final Uri whatsappUri = Uri.https(
-      'wa.me',
-      '/$normalizedPhone',
-      <String, String>{'text': backup},
-    );
-
-    final bool opened = await launchUrl(
-      whatsappUri,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!opened) {
-      _snack('تعذر فتح WhatsApp لإرسال النسخة الاحتياطية.', error: true);
-    }
-  }
-
-  void _exportTransactions() {
-    final List<TransactionRecord> records =
-        _selectMode && _selectedTransactions.isNotEmpty
+  void exportSelected() {
+    final List<FinancialTransaction> records =
+        _selectionMode && _selectedIds.isNotEmpty
             ? _transactions
                 .where(
-                  (TransactionRecord item) =>
-                      _selectedTransactions.contains(item.id),
+                  (FinancialTransaction item) =>
+                      _selectedIds.contains(item.id),
                 )
                 .toList()
             : _transactions;
 
     final String report = '''
-تقرير محاسبي المالي
+تقرير محاسبي الشامل
 المالك: $_profileName
-عدد السجلات: ${records.length}
+عدد العمليات: ${records.length}
 ================================================
-${records.map((TransactionRecord item) {
-      final String type =
-          item.type == TransactionType.income ? 'دخل' : 'مصروف';
-
+${records.map((FinancialTransaction item) {
       return '''
 العنوان: ${item.title}
-النوع: $type
+النوع: ${transactionTypeName(item.type)}
+القسم: ${sectionName(item.sectionId)}
+المبلغ: ${money(item.amount)} ${item.currency}
 التصنيف: ${item.category}
-المبلغ: ${_money(item.amount)} ريال يمني
+الطرف المقابل: ${item.counterparty}
+المكان: ${item.place}
+السبب: ${item.reason}
+الطريقة: ${item.paymentMethod}
 التاريخ: ${item.dateLabel}
+المرجع: ${item.referenceNumber}
 الملاحظات: ${item.notes}
 ------------------------------------------------''';
     }).join('\n')}
-© 2026 جميع الحقوق محفوظة لـ محاسبي
-صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان
+© 2026 جميع الحقوق محفوظة لـ محاسبي الشامل
 ''';
 
     debugPrint(report);
 
-    _snack(
-      'تم تجهيز تقرير نصي منظم لـ ${records.length} سجل. تم إنشاء النص بنجاح.',
+    snack(
+      'تم إنشاء تقرير نصي منظم لـ ${records.length} عملية داخل التطبيق.',
     );
   }
 
-  void _showSalaryDialog() {
-    final TextEditingController amountController = TextEditingController();
-    final TextEditingController titleController =
-        TextEditingController(text: 'راتب أو دخل وارد');
-    final TextEditingController dateController =
-        TextEditingController(text: 'ميلادي / هجري: يُدخل يدوياً');
-    final TextEditingController notesController =
-        TextEditingController(text: 'توزيع تلقائي للمحافظ');
+  String sectionName(String id) {
+    for (final FinancialSection section in _sections) {
+      if (section.id == id) {
+        return section.name;
+      }
+    }
 
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('توزيع الدخل التلقائي'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Text(
-                  'القاعدة: 20,000 ريال للجمعية، 50,000 ريال للمصروفات اليومية، والباقي للادخار الاستراتيجي.',
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'مبلغ الدخل بالريال اليمني',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'عنوان العملية'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: dateController,
-                  decoration: const InputDecoration(
-                    labelText: 'التاريخ الميلادي أو الهجري',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'ملاحظات'),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final double? amount = parseDouble(amountController.text);
-
-                if (amount == null) {
-                  _snack('أدخل مبلغًا صحيحًا.', error: true);
-                  return;
-                }
-
-                _allocateSalary(
-                  amount: amount,
-                  title: titleController.text,
-                  dateLabel: dateController.text,
-                  notes: notesController.text,
-                );
-
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('تنفيذ التوزيع'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      amountController.dispose();
-      titleController.dispose();
-      dateController.dispose();
-      notesController.dispose();
-    });
+    return 'قسم محذوف';
   }
 
-  void _showTransactionDialog() {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController categoryController = TextEditingController();
-    final TextEditingController amountController = TextEditingController();
-    final TextEditingController dateController =
-        TextEditingController(text: 'ميلادي / هجري: يُدخل يدوياً');
-    final TextEditingController notesController = TextEditingController();
-
-    TransactionType selectedType = TransactionType.expense;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                8,
-                20,
-                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Text(
-                      'إضافة عملية مالية',
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: 'العنوان'),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: categoryController,
-                      decoration: const InputDecoration(labelText: 'التصنيف'),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'المبلغ بالريال اليمني',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: dateController,
-                      decoration: const InputDecoration(
-                        labelText: 'التاريخ الهجري أو الميلادي',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: notesController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'ملاحظات المستلم أو تفاصيل العملية',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<TransactionType>(
-                      segments: const <ButtonSegment<TransactionType>>[
-                        ButtonSegment<TransactionType>(
-                          value: TransactionType.income,
-                          icon: Icon(Icons.add_circle_outline),
-                          label: Text('دخل'),
-                        ),
-                        ButtonSegment<TransactionType>(
-                          value: TransactionType.expense,
-                          icon: Icon(Icons.remove_circle_outline),
-                          label: Text('مصروف'),
-                        ),
-                      ],
-                      selected: <TransactionType>{selectedType},
-                      onSelectionChanged: (Set<TransactionType> value) {
-                        setSheetState(() => selectedType = value.first);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          final double? amount =
-                              parseDouble(amountController.text);
-
-                          if (amount == null) {
-                            _snack('أدخل مبلغًا صالحًا.', error: true);
-                            return;
-                          }
-
-                          _addTransaction(
-                            title: titleController.text,
-                            category: categoryController.text,
-                            dateLabel: dateController.text,
-                            notes: notesController.text,
-                            amount: amount,
-                            type: selectedType,
-                          );
-
-                          Navigator.pop(sheetContext);
-                        },
-                        icon: const Icon(Icons.save_rounded),
-                        label: const Text('حفظ العملية'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).whenComplete(() {
-      titleController.dispose();
-      categoryController.dispose();
-      amountController.dispose();
-      dateController.dispose();
-      notesController.dispose();
-    });
-  }
-
-  void _showAddLedgerDialog(LedgerType type) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController phoneController = TextEditingController();
-    final TextEditingController balanceController = TextEditingController();
-    final TextEditingController notesController = TextEditingController();
-    final TextEditingController dateController =
-        TextEditingController(text: 'تاريخ مُدخل يدوياً');
-
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('إضافة ${ledgerTypeTitle(type)}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'الاسم'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'رقم واتساب اليمني 967',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'الرصيد'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'الوصف'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: dateController,
-                  decoration: const InputDecoration(labelText: 'تاريخ الاستحقاق'),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final double? balance = parseDouble(balanceController.text);
-
-                if (balance == null || balance < 0.0) {
-                  _snack('أدخل رصيدًا صالحًا.', error: true);
-                  return;
-                }
-
-                setState(() {
-                  _ledgerFor(type).add(
-                    LedgerEntry(
-                      id: DateTime.now().microsecondsSinceEpoch.toString(),
-                      name: nameController.text.trim().isEmpty
-                          ? 'بدون اسم'
-                          : nameController.text.trim(),
-                      phone: phoneController.text.trim(),
-                      type: type,
-                      balance: balance,
-                      notes: notesController.text.trim(),
-                      dateLabel: dateController.text.trim().isEmpty
-                          ? 'غير محدد'
-                          : dateController.text.trim(),
-                    ),
-                  );
-                });
-
-                Navigator.pop(dialogContext);
-                _snack('تمت إضافة ${ledgerTypeTitle(type)}.');
-              },
-              child: const Text('إضافة'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      nameController.dispose();
-      phoneController.dispose();
-      balanceController.dispose();
-      notesController.dispose();
-      dateController.dispose();
-    });
-  }
-
-  void _showLedgerMenu(LedgerEntry entry) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.visibility_rounded),
-                title: const Text('عرض الملف'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showLedgerDetails(entry);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit_rounded),
-                title: const Text('تعديل السجل'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _editLedgerEntry(entry);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.share_rounded),
-                title: const Text('مشاركة تأكيد الرصيد'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _sendDebtReminder(entry);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.print_rounded),
-                title: const Text('طباعة التأكيد'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _snack(
-                    'تم تجهيز نص تأكيد الرصيد. الطباعة الفعلية تحتاج حزمة إضافية.',
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_forever_rounded,
-                  color: AppColors.danger,
-                ),
-                title: const Text(
-                  'حذف السجل',
-                  style: TextStyle(color: AppColors.danger),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  setState(() {
-                    _ledgerFor(entry.type).removeWhere(
-                      (LedgerEntry item) => item.id == entry.id,
-                    );
-                  });
-                  _snack('تم حذف السجل.');
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showLedgerDetails(LedgerEntry entry) {
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(entry.name),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              detailLine('النوع', ledgerTypeTitle(entry.type)),
-              detailLine('الرصيد', '${_money(entry.balance)} ريال يمني'),
-              detailLine('الهاتف', entry.phone ?? 'غير مسجل'),
-              detailLine('الوصف', entry.notes),
-              detailLine('التاريخ', entry.dateLabel),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إغلاق'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _editLedgerEntry(LedgerEntry entry) {
-    final TextEditingController nameController =
-        TextEditingController(text: entry.name);
-    final TextEditingController phoneController =
-        TextEditingController(text: entry.phone ?? '');
-    final TextEditingController balanceController =
-        TextEditingController(text: entry.balance.toString());
-    final TextEditingController notesController =
-        TextEditingController(text: entry.notes);
-    final TextEditingController dateController =
-        TextEditingController(text: entry.dateLabel);
-
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('تعديل السجل'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'الاسم'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(labelText: 'رقم واتساب'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'الرصيد'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(labelText: 'الوصف'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: dateController,
-                  decoration: const InputDecoration(labelText: 'التاريخ'),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final double? balance = parseDouble(balanceController.text);
-
-                if (balance == null || balance < 0.0) {
-                  _snack('أدخل مبلغًا صالحًا.', error: true);
-                  return;
-                }
-
-                setState(() {
-                  entry.name = nameController.text.trim().isEmpty
-                      ? 'بدون اسم'
-                      : nameController.text.trim();
-                  entry.phone = phoneController.text.trim();
-                  entry.balance = balance;
-                  entry.notes = notesController.text.trim();
-                  entry.dateLabel = dateController.text.trim();
-                });
-
-                Navigator.pop(dialogContext);
-                _snack('تم تعديل السجل.');
-              },
-              child: const Text('حفظ'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      nameController.dispose();
-      phoneController.dispose();
-      balanceController.dispose();
-      notesController.dispose();
-      dateController.dispose();
-    });
-  }
-
-  void _editProfile() {
-    final TextEditingController nameController =
-        TextEditingController(text: _profileName);
-    final TextEditingController phoneController =
-        TextEditingController(text: _profilePhone);
-    final TextEditingController avatarController =
-        TextEditingController(text: _avatarLetters);
-
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('تعديل الملف الشخصي'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'الاسم الكامل'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(labelText: 'الهاتف'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: avatarController,
-                maxLength: 3,
-                decoration: const InputDecoration(labelText: 'حروف الصورة'),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () {
-                setState(() {
-                  _profileName = nameController.text.trim().isEmpty
-                      ? _profileName
-                      : nameController.text.trim();
-
-                  _profilePhone = phoneController.text.trim().isEmpty
-                      ? _profilePhone
-                      : phoneController.text.trim();
-
-                  _avatarLetters = avatarController.text.trim().isEmpty
-                      ? _avatarLetters
-                      : avatarController.text.trim().toUpperCase();
-                });
-
-                Navigator.pop(dialogContext);
-                _snack('تم حفظ بيانات الملف الشخصي.');
-              },
-              child: const Text('حفظ'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      nameController.dispose();
-      phoneController.dispose();
-      avatarController.dispose();
-    });
+  String transactionTypeName(TransactionType type) {
+    switch (type) {
+      case TransactionType.income:
+        return 'دخل';
+      case TransactionType.expense:
+        return 'خرج';
+      case TransactionType.transferOut:
+        return 'تحويل صادر';
+      case TransactionType.transferIn:
+        return 'تحويل وارد';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = <Widget>[
-      _walletsPage(),
-      _ledgerPage(),
-      _recordsPage(),
-      _controlPage(),
+      peopleAndMerchantsPage(),
+      kidsSavingsPage(),
+      expensesAndInventoryPage(),
+      controlCenterPage(),
     ];
 
     return Scaffold(
@@ -1126,199 +620,57 @@ ${records.map((TransactionRecord item) {
         index: _tabIndex,
         children: pages,
       ),
-      floatingActionButton: _tabIndex == 2
-          ? FloatingActionButton.extended(
-              onPressed: _showTransactionDialog,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('إضافة عملية'),
-            )
-          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tabIndex,
-        height: 78,
+        height: 80,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (int value) {
-          setState(() => _tabIndex = value);
+        onDestinationSelected: (int index) {
+          setState(() => _tabIndex = index);
         },
         destinations: const <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-            label: 'المحافظ والصندوق',
+            icon: Icon(Icons.people_outline_rounded),
+            selectedIcon: Icon(Icons.people_rounded),
+            label: 'الأفراد والتجار',
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book_rounded),
-            label: 'دفتر الحسابات',
+            icon: Icon(Icons.savings_outlined),
+            selectedIcon: Icon(Icons.savings_rounded),
+            label: 'حصالة الأطفال',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'السجلات والتقارير',
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2_rounded),
+            label: 'المصاريف والجرد',
           ),
           NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune_rounded),
-            label: 'مركز التحكم',
+            icon: Icon(Icons.admin_panel_settings_outlined),
+            selectedIcon: Icon(Icons.admin_panel_settings_rounded),
+            label: 'التحكم والأمان',
           ),
         ],
       ),
     );
   }
 
-  Widget _walletsPage() {
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
-        children: <Widget>[
-          const PageHeader(
-            title: 'المحافظ والصندوق',
-            subtitle: 'إدارة سيولة ذكية من رصيد صفر',
-            icon: Icons.account_balance_wallet_rounded,
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: <Color>[
-                  AppColors.emerald,
-                  AppColors.emeraldDark,
-                ],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              ),
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'صافي الرصيد التراكمي',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '${_money(_netBalance)} ي.ر',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'الدخل: ${_money(_totalIncome)} • المصروفات: ${_money(_totalExpenses)}',
-                  style: const TextStyle(
-                    color: Color(0xFFD2F4EA),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (_financialLeak)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE5E5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.danger),
-              ),
-              child: Text(
-                'تنبيه تسرب مالي: إجمالي المصروفات ${_money(_totalExpenses)} تجاوز حد الميزانية ${_money(_expenseThreshold)}.',
-                style: const TextStyle(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          const SizedBox(height: 14),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _showSalaryDialog,
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  label: const Text('توزيع دخل'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _sendCloudBackup,
-                  icon: const Icon(Icons.cloud_upload_rounded),
-                  label: const Text('نسخة واتساب'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'المحافظ الفرعية',
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ..._wallets.map(
-            (WalletFolder wallet) => Card(
-              elevation: 0,
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(15),
-                leading: CircleAvatar(
-                  backgroundColor: wallet.color.withOpacity(0.14),
-                  foregroundColor: wallet.color,
-                  child: Icon(wallet.icon),
-                ),
-                title: Text(
-                  wallet.title,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-                subtitle: const Text('الرصيد يبدأ من صفر ويتراكم ديناميكياً'),
-                trailing: Text(
-                  '${_money(wallet.balance)} ي.ر',
-                  style: TextStyle(
-                    color: wallet.color,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          CurrencyConverter(
-            arabicDigits: widget.arabicDigits,
-            yerPerSar: _yerPerSar,
-            yerPerUsd: _yerPerUsd,
-          ),
-          const BrandFooter(),
-        ],
-      ),
-    );
-  }
-
-  Widget _ledgerPage() {
+  Widget peopleAndMerchantsPage() {
     return SafeArea(
       child: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: <Widget>[
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: PageHeader(
-                title: 'دفتر الحسابات',
-                subtitle: 'العملاء والموردون والعمال',
-                icon: Icons.menu_book_rounded,
+              child: AppHeader(
+                title: 'دفتر الأفراد والتجار',
+                subtitle: 'أقسامك وعملياتك وحساباتك المرنة',
+                icon: Icons.people_rounded,
               ),
             ),
             const TabBar(
+              isScrollable: true,
               tabs: <Widget>[
+                Tab(text: 'الأقسام'),
                 Tab(text: 'العملاء'),
                 Tab(text: 'الموردون'),
                 Tab(text: 'العمال'),
@@ -1327,9 +679,10 @@ ${records.map((TransactionRecord item) {
             Expanded(
               child: TabBarView(
                 children: <Widget>[
-                  _ledgerList(LedgerType.client),
-                  _ledgerList(LedgerType.vendor),
-                  _ledgerList(LedgerType.worker),
+                  sectionsPage(),
+                  ledgerPage(LedgerType.client),
+                  ledgerPage(LedgerType.vendor),
+                  ledgerPage(LedgerType.worker),
                 ],
               ),
             ),
@@ -1339,34 +692,336 @@ ${records.map((TransactionRecord item) {
     );
   }
 
-  Widget _ledgerList(LedgerType type) {
-    final List<LedgerEntry> entries = _ledgerFor(type);
-
+  Widget sectionsPage() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
       children: <Widget>[
         FilledButton.icon(
-          onPressed: () => _showAddLedgerDialog(type),
+          onPressed: showCreateSectionDialog,
+          icon: const Icon(Icons.create_new_folder_rounded),
+          label: const Text('إنشاء قسم جديد'),
+        ),
+        const SizedBox(height: 12),
+        if (_sections.isEmpty)
+          const EmptyStateBox(
+            icon: Icons.folder_open_rounded,
+            title: 'لا توجد أقسام بعد',
+            subtitle: 'أنشئ قسمك الأول: صندوق البيت، متجر، سفر، بناء أو أي اسم تريده.',
+          )
+        else
+          ..._sections.map(
+            (FinancialSection section) => SectionCard(
+              section: section,
+              balance: money(sectionBalance(section)),
+              onAddOperation: () => showAddTransactionDialog(section),
+              onTransfer: () => showTransferDialog(section),
+            ),
+          ),
+        const BrandFooter(),
+      ],
+    );
+  }
+
+  Widget ledgerPage(LedgerType type) {
+    final List<LedgerEntry> entries = ledgerList(type);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+      children: <Widget>[
+        FilledButton.icon(
+          onPressed: () => showAddLedgerDialog(type),
           icon: const Icon(Icons.person_add_alt_1_rounded),
-          label: Text('إضافة ${ledgerTypeTitle(type)}'),
+          label: Text('إضافة ${ledgerTypeName(type)}'),
         ),
         const SizedBox(height: 12),
         if (entries.isEmpty)
-          const EmptyBox(
-            icon: Icons.folder_open_rounded,
-            title: 'لا توجد بيانات بعد',
-            subtitle: 'ابدأ بإضافة قيد جديد إلى دفتر الحسابات.',
+          const EmptyStateBox(
+            icon: Icons.person_off_outlined,
+            title: 'لا توجد قيود',
+            subtitle: 'أضف سجلًا جديدًا وسيظهر هنا.',
           )
         else
           ...entries.map(
-            (LedgerEntry entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: LedgerCard(
-                entry: entry,
-                amount: _money(entry.balance),
-                onReminder: () => _sendDebtReminder(entry),
-                onLongPress: () => _showLedgerMenu(entry),
-                onTap: () => _showLedgerDetails(entry),
+            (LedgerEntry entry) => LedgerCard(
+              entry: entry,
+              amount: money(entry.balance.abs()),
+              onWhatsApp: () => sendReminder(entry),
+              onDelete: () {
+                setState(() => ledgerList(type).remove(entry));
+                snack('تم حذف السجل.');
+              },
+            ),
+          ),
+        const BrandFooter(),
+      ],
+    );
+  }
+
+  Widget kidsSavingsPage() {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+        children: <Widget>[
+          const AppHeader(
+            title: 'حصالة الأطفال والتدقيق',
+            subtitle: 'أهداف ادخار ومكافآت ومتابعة تربوية',
+            icon: Icons.savings_rounded,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: showAddChildGoalDialog,
+            icon: const Icon(Icons.add_reaction_rounded),
+            label: const Text('إنشاء هدف ادخار للطفل'),
+          ),
+          const SizedBox(height: 12),
+          if (_childGoals.isEmpty)
+            const EmptyStateBox(
+              icon: Icons.child_care_rounded,
+              title: 'لا توجد حصالات أطفال',
+              subtitle: 'أنشئ هدفًا مثل لعبة، رحلة، دراجة أو مصروف مدرسي.',
+            )
+          else
+            ..._childGoals.map(
+              (ChildGoal goal) => Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${goal.childName} — ${goal.goalName}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(value: goal.progress),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${money(goal.saved)} من ${money(goal.target)} ريال • نقاط مكافأة: ${money(goal.rewardPoints)}',
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: () => showDepositChildDialog(goal),
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('إضافة ادخار أو مكافأة'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          const BrandFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget expensesAndInventoryPage() {
+    return SafeArea(
+      child: DefaultTabController(
+        length: 2,
+        child: Column(
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: AppHeader(
+                title: 'إدارة المصاريف والجرد',
+                subtitle: 'مصروفات، مبيعات، مخزون وتنبيهات أمان',
+                icon: Icons.inventory_2_rounded,
+              ),
+            ),
+            const TabBar(
+              tabs: <Widget>[
+                Tab(text: 'السجلات'),
+                Tab(text: 'الجرد'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: <Widget>[
+                  transactionsPage(),
+                  inventoryPage(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget transactionsPage() {
+    final bool allSelected = _transactions.isNotEmpty &&
+        _selectedIds.length == _transactions.length;
+
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _sections.isEmpty
+                      ? null
+                      : () => showAddTransactionDialog(_sections.first),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('إضافة عملية'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                onPressed: () {
+                  setState(() {
+                    _selectionMode = !_selectionMode;
+                    if (!_selectionMode) {
+                      _selectedIds.clear();
+                    }
+                  });
+                },
+                icon: Icon(
+                  _selectionMode
+                      ? Icons.close_rounded
+                      : Icons.checklist_rounded,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_hasLeak)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE5E5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.danger),
+              ),
+              child: Text(
+                'تنبيه تسرب مالي: المصروفات ${money(_totalExpenses)} تجاوزت حد الأمان ${money(_expenseThreshold)}.',
+                style: const TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        if (_selectionMode)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        if (allSelected) {
+                          _selectedIds.clear();
+                        } else {
+                          _selectedIds
+                            ..clear()
+                            ..addAll(
+                              _transactions.map(
+                                (FinancialTransaction item) => item.id,
+                              ),
+                            );
+                        }
+                      });
+                    },
+                    child: Text(
+                      allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: exportSelected,
+                    icon: const Icon(Icons.file_download_rounded),
+                    label: const Text('تصدير'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: _transactions.isEmpty
+              ? const Center(
+                  child: EmptyStateBox(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'لا توجد عمليات',
+                    subtitle: 'أنشئ الأقسام أولًا ثم أضف دخلاً أو خرجًا أو تحويلًا.',
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  itemCount: _transactions.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final FinancialTransaction item = _transactions[index];
+                    final bool selected = _selectedIds.contains(item.id);
+
+                    return TransactionCard(
+                      item: item,
+                      amount: money(item.amount),
+                      section: sectionName(item.sectionId),
+                      selectionMode: _selectionMode,
+                      selected: selected,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value ?? false) {
+                            _selectedIds.add(item.id);
+                          } else {
+                            _selectedIds.remove(item.id);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget inventoryPage() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+      children: <Widget>[
+        FilledButton.icon(
+          onPressed: showAddInventoryDialog,
+          icon: const Icon(Icons.add_box_rounded),
+          label: const Text('إضافة صنف إلى الجرد'),
+        ),
+        const SizedBox(height: 12),
+        if (_inventory.isEmpty)
+          const EmptyStateBox(
+            icon: Icons.inventory_2_outlined,
+            title: 'المخزون فارغ',
+            subtitle: 'أضف منتجات أو مواد أو أصول لمتابعة الكميات.',
+          )
+        else
+          ..._inventory.map(
+            (InventoryItem item) => Card(
+              elevation: 0,
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.inventory_2_rounded),
+                ),
+                title: Text(
+                  item.name,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(
+                  'الكمية: ${money(item.quantity)} • سعر الوحدة: ${money(item.unitPrice)}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.point_of_sale_rounded),
+                  onPressed: () => showInventorySaleDialog(item),
+                ),
               ),
             ),
           ),
@@ -1375,155 +1030,27 @@ ${records.map((TransactionRecord item) {
     );
   }
 
-  Widget _recordsPage() {
-    final bool allSelected = _transactions.isNotEmpty &&
-        _selectedTransactions.length == _transactions.length;
-
-    return SafeArea(
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: PageHeader(
-                    title: _selectMode
-                        ? 'تم تحديد ${_selectedTransactions.length} سجل'
-                        : 'السجلات والتقارير',
-                    subtitle: 'تحديد متعدد وتصدير نصي منسق',
-                    icon: Icons.receipt_long_rounded,
-                  ),
-                ),
-                IconButton.filledTonal(
-                  onPressed: () {
-                    setState(() {
-                      _selectMode = !_selectMode;
-                      if (!_selectMode) {
-                        _selectedTransactions.clear();
-                      }
-                    });
-                  },
-                  icon: Icon(
-                    _selectMode
-                        ? Icons.close_rounded
-                        : Icons.checklist_rounded,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_selectMode)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 4,
-              ),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _transactions.isEmpty
-                          ? null
-                          : () {
-                              setState(() {
-                                if (allSelected) {
-                                  _selectedTransactions.clear();
-                                } else {
-                                  _selectedTransactions
-                                    ..clear()
-                                    ..addAll(
-                                      _transactions.map(
-                                        (TransactionRecord item) => item.id,
-                                      ),
-                                    );
-                                }
-                              });
-                            },
-                      icon: Icon(
-                        allSelected
-                            ? Icons.deselect_rounded
-                            : Icons.select_all_rounded,
-                      ),
-                      label: Text(
-                        allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed:
-                          _transactions.isEmpty ? null : _exportTransactions,
-                      icon: const Icon(Icons.file_download_rounded),
-                      label: const Text('تصدير TXT'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: _transactions.isEmpty
-                ? const Center(
-                    child: EmptyBox(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'السجل فارغ',
-                      subtitle: 'لا توجد عمليات مالية منذ تشغيل التطبيق.',
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
-                    itemCount: _transactions.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (BuildContext context, int index) {
-                      final TransactionRecord item = _transactions[index];
-                      final bool selected =
-                          _selectedTransactions.contains(item.id);
-
-                      return TransactionCard(
-                        item: item,
-                        amount: _money(item.amount),
-                        selectionMode: _selectMode,
-                        selected: selected,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value ?? false) {
-                              _selectedTransactions.add(item.id);
-                            } else {
-                              _selectedTransactions.remove(item.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _controlPage() {
+  Widget controlCenterPage() {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         children: <Widget>[
-          const PageHeader(
-            title: 'مركز التحكم الفخم',
-            subtitle: 'الهوية والمظهر والأرقام والحدود المالية',
-            icon: Icons.tune_rounded,
+          const AppHeader(
+            title: 'مركز التحكم الفخم والأمان',
+            subtitle: 'المظهر، الأرقام، الأسعار، الهوية والحدود',
+            icon: Icons.admin_panel_settings_rounded,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Card(
             elevation: 0,
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
               leading: CircleAvatar(
-                radius: 27,
+                radius: 26,
                 backgroundColor: AppColors.emerald,
                 foregroundColor: Colors.white,
                 child: Text(
-                  _avatarLetters,
+                  _profileAvatar,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
@@ -1534,11 +1061,11 @@ ${records.map((TransactionRecord item) {
               subtitle: Text(_profilePhone),
               trailing: IconButton(
                 icon: const Icon(Icons.edit_rounded),
-                onPressed: _editProfile,
+                onPressed: showProfileDialog,
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Card(
             elevation: 0,
             child: Column(
@@ -1592,81 +1119,846 @@ ${records.map((TransactionRecord item) {
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          NumberSetting(
-            label: 'سعر 1 ريال سعودي بالريال اليمني',
+          const SizedBox(height: 12),
+          NumberEditor(
+            title: 'سعر 1 ريال سعودي بالريال اليمني',
             value: _yerPerSar,
             onSave: (double value) {
               setState(() => _yerPerSar = value);
             },
           ),
-          const SizedBox(height: 10),
-          NumberSetting(
-            label: 'سعر 1 دولار بالريال اليمني',
+          const SizedBox(height: 8),
+          NumberEditor(
+            title: 'سعر 1 دولار بالريال اليمني',
             value: _yerPerUsd,
             onSave: (double value) {
               setState(() => _yerPerUsd = value);
             },
           ),
-          const SizedBox(height: 10),
-          NumberSetting(
-            label: 'حد تنبيه التسرب المالي',
+          const SizedBox(height: 8),
+          NumberEditor(
+            title: 'حد تنبيه المصروفات',
             value: _expenseThreshold,
             onSave: (double value) {
               setState(() => _expenseThreshold = value);
             },
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: <Color>[
-                  Color(0xFF451313),
-                  Color(0xFF111111),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.6),
-              ),
-            ),
-            child: const Column(
-              children: <Widget>[
-                Icon(
-                  Icons.workspace_premium_rounded,
-                  color: AppColors.gold,
-                  size: 34,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'لوحة الملكية الفكرية',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 7),
-                Text(
-                  'هوية محاسبي وعلامتها التجارية جزء ثابت من واجهة النظام.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFFF4E8E8),
-                  ),
-                ),
-              ],
-            ),
-          ),
           const BrandFooter(),
         ],
       ),
     );
   }
+
+  void showCreateSectionDialog() {
+    final TextEditingController name = TextEditingController();
+    final TextEditingController description = TextEditingController();
+    final TextEditingController currency =
+        TextEditingController(text: 'YER');
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('إنشاء قسم مالي'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(
+                  labelText: 'اسم القسم',
+                  hintText: 'مثل: صندوق البيت أو تجارة الملابس',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: description,
+                decoration: const InputDecoration(labelText: 'وصف القسم'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: currency,
+                decoration: const InputDecoration(
+                  labelText: 'العملة',
+                  hintText: 'YER أو SAR أو USD',
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                addSection(
+                  name: name.text,
+                  description: description.text,
+                  currency: currency.text,
+                );
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('إنشاء'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      name.dispose();
+      description.dispose();
+      currency.dispose();
+    });
+  }
+
+  void showAddTransactionDialog(FinancialSection defaultSection) {
+    if (_sections.isEmpty) {
+      snack('أنشئ قسمًا ماليًا أولًا.', error: true);
+      return;
+    }
+
+    final TextEditingController title = TextEditingController();
+    final TextEditingController amount = TextEditingController();
+    final TextEditingController date =
+        TextEditingController(text: 'تاريخ ميلادي / هجري');
+    final TextEditingController category = TextEditingController();
+    final TextEditingController counterparty = TextEditingController();
+    final TextEditingController place = TextEditingController();
+    final TextEditingController reason = TextEditingController();
+    final TextEditingController method = TextEditingController(
+      text: 'نقدًا',
+    );
+    final TextEditingController reference = TextEditingController();
+    final TextEditingController notes = TextEditingController();
+    final TextEditingController labels = TextEditingController();
+
+    FinancialSection selectedSection = defaultSection;
+    TransactionType selectedType = TransactionType.expense;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Text(
+                      'عملية مالية مفصلة',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 19,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<FinancialSection>(
+                      value: selectedSection,
+                      decoration: const InputDecoration(labelText: 'القسم'),
+                      items: _sections.map(
+                        (FinancialSection section) {
+                          return DropdownMenuItem<FinancialSection>(
+                            value: section,
+                            child: Text(section.name),
+                          );
+                        },
+                      ).toList(),
+                      onChanged: (FinancialSection? value) {
+                        if (value != null) {
+                          setSheetState(() => selectedSection = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 9),
+                    DropdownButtonFormField<TransactionType>(
+                      value: selectedType,
+                      decoration: const InputDecoration(labelText: 'نوع الحركة'),
+                      items: const <DropdownMenuItem<TransactionType>>[
+                        DropdownMenuItem<TransactionType>(
+                          value: TransactionType.income,
+                          child: Text('دخل'),
+                        ),
+                        DropdownMenuItem<TransactionType>(
+                          value: TransactionType.expense,
+                          child: Text('خرج / مصروف'),
+                        ),
+                      ],
+                      onChanged: (TransactionType? value) {
+                        if (value != null) {
+                          setSheetState(() => selectedType = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: title,
+                      decoration: const InputDecoration(
+                        labelText: 'ماذا حدث؟ عنوان العملية',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: amount,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'المبلغ',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: category,
+                      decoration: const InputDecoration(
+                        labelText: 'التصنيف',
+                        hintText: 'منزل، تجارة، نقل، إيجار، علاج...',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: counterparty,
+                      decoration: const InputDecoration(
+                        labelText: 'من / إلى من؟',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: place,
+                      decoration: const InputDecoration(
+                        labelText: 'أين حدثت العملية؟',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: reason,
+                      decoration: const InputDecoration(
+                        labelText: 'لماذا تمت العملية؟',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: method,
+                      decoration: const InputDecoration(
+                        labelText: 'كيف تم الدفع أو الاستلام؟',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: date,
+                      decoration: const InputDecoration(
+                        labelText: 'متى؟ تاريخ هجري أو ميلادي',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: reference,
+                      decoration: const InputDecoration(
+                        labelText: 'رقم فاتورة أو حوالة أو مرجع',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: labels,
+                      decoration: const InputDecoration(
+                        labelText: 'وسوم مفصولة بفواصل',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: notes,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'ملاحظات إضافية',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          final double? value = parseDouble(amount.text);
+
+                          if (value == null) {
+                            snack('أدخل مبلغًا صحيحًا.', error: true);
+                            return;
+                          }
+
+                          addTransaction(
+                            FinancialTransaction(
+                              id: DateTime.now()
+                                  .microsecondsSinceEpoch
+                                  .toString(),
+                              sectionId: selectedSection.id,
+                              title: title.text.trim().isEmpty
+                                  ? 'عملية مالية'
+                                  : title.text.trim(),
+                              type: selectedType,
+                              amount: value,
+                              currency: selectedSection.currency,
+                              dateLabel: date.text.trim(),
+                              category: category.text.trim(),
+                              counterparty: counterparty.text.trim(),
+                              place: place.text.trim(),
+                              reason: reason.text.trim(),
+                              paymentMethod: method.text.trim(),
+                              referenceNumber: reference.text.trim(),
+                              notes: notes.text.trim(),
+                              labels: labels.text
+                                  .split(',')
+                                  .map((String item) => item.trim())
+                                  .where(
+                                    (String item) => item.isNotEmpty,
+                                  )
+                                  .toList(),
+                            ),
+                          );
+
+                          Navigator.pop(sheetContext);
+                        },
+                        icon: const Icon(Icons.save_rounded),
+                        label: const Text('حفظ العملية'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      title.dispose();
+      amount.dispose();
+      date.dispose();
+      category.dispose();
+      counterparty.dispose();
+      place.dispose();
+      reason.dispose();
+      method.dispose();
+      reference.dispose();
+      notes.dispose();
+      labels.dispose();
+    });
+  }
+
+  void showTransferDialog(FinancialSection from) {
+    if (_sections.length < 2) {
+      snack('أنشئ قسمًا ثانيًا لإجراء تحويل.', error: true);
+      return;
+    }
+
+    final TextEditingController amount = TextEditingController();
+    final TextEditingController notes = TextEditingController();
+    FinancialSection target =
+        _sections.firstWhere((FinancialSection item) => item.id != from.id);
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('تحويل من ${from.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              DropdownButtonFormField<FinancialSection>(
+                value: target,
+                decoration: const InputDecoration(labelText: 'القسم المستهدف'),
+                items: _sections
+                    .where(
+                      (FinancialSection item) => item.id != from.id,
+                    )
+                    .map(
+                      (FinancialSection item) =>
+                          DropdownMenuItem<FinancialSection>(
+                        value: item,
+                        child: Text(item.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (FinancialSection? value) {
+                  if (value != null) {
+                    target = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 9),
+              TextField(
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(labelText: 'المبلغ'),
+              ),
+              const SizedBox(height: 9),
+              TextField(
+                controller: notes,
+                decoration: const InputDecoration(labelText: 'سبب التحويل'),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final double? value = parseDouble(amount.text);
+
+                if (value == null) {
+                  snack('أدخل مبلغًا صالحًا.', error: true);
+                  return;
+                }
+
+                transfer(
+                  from: from,
+                  to: target,
+                  amount: value,
+                  description: notes.text,
+                );
+
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('تنفيذ التحويل'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      amount.dispose();
+      notes.dispose();
+    });
+  }
+
+  void showAddLedgerDialog(LedgerType type) {
+    final TextEditingController name = TextEditingController();
+    final TextEditingController phone = TextEditingController();
+    final TextEditingController credit = TextEditingController();
+    final TextEditingController debit = TextEditingController();
+    final TextEditingController notes = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('إضافة ${ledgerTypeName(type)}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  controller: name,
+                  decoration: const InputDecoration(labelText: 'الاسم'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'رقم واتساب اليمني 967',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: credit,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'له'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: debit,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'عليه'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: notes,
+                  decoration: const InputDecoration(labelText: 'ملاحظات'),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final double creditValue = parseDouble(credit.text) ?? 0.0;
+                final double debitValue = parseDouble(debit.text) ?? 0.0;
+
+                setState(() {
+                  ledgerList(type).add(
+                    LedgerEntry(
+                      id: DateTime.now()
+                          .microsecondsSinceEpoch
+                          .toString(),
+                      name: name.text.trim().isEmpty
+                          ? 'بدون اسم'
+                          : name.text.trim(),
+                      phone: phone.text.trim(),
+                      type: type,
+                      credit: creditValue,
+                      debit: debitValue,
+                      currency: 'YER',
+                      notes: notes.text.trim(),
+                    ),
+                  );
+                });
+
+                Navigator.pop(dialogContext);
+                snack('تمت إضافة السجل.');
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      name.dispose();
+      phone.dispose();
+      credit.dispose();
+      debit.dispose();
+      notes.dispose();
+    });
+  }
+
+  void showAddChildGoalDialog() {
+    final TextEditingController child = TextEditingController();
+    final TextEditingController goal = TextEditingController();
+    final TextEditingController target = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('هدف ادخار جديد'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: child,
+                decoration: const InputDecoration(labelText: 'اسم الطفل'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: goal,
+                decoration: const InputDecoration(labelText: 'الهدف'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: target,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'المبلغ المستهدف',
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final double? value = parseDouble(target.text);
+
+                if (value == null || value <= 0.0) {
+                  snack('أدخل هدفًا ماليًا صحيحًا.', error: true);
+                  return;
+                }
+
+                setState(() {
+                  _childGoals.add(
+                    ChildGoal(
+                      id: DateTime.now()
+                          .microsecondsSinceEpoch
+                          .toString(),
+                      childName: child.text.trim(),
+                      goalName: goal.text.trim(),
+                      target: value,
+                    ),
+                  );
+                });
+
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('إنشاء'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      child.dispose();
+      goal.dispose();
+      target.dispose();
+    });
+  }
+
+  void showDepositChildDialog(ChildGoal goal) {
+    final TextEditingController amount = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('إيداع في حصالة ${goal.childName}'),
+          content: TextField(
+            controller: amount,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: const InputDecoration(labelText: 'المبلغ'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final double? value = parseDouble(amount.text);
+
+                if (value == null || value <= 0.0) {
+                  snack('أدخل مبلغًا صحيحًا.', error: true);
+                  return;
+                }
+
+                setState(() {
+                  goal.saved += value;
+                  goal.rewardPoints += value / 1000.0;
+                });
+
+                Navigator.pop(dialogContext);
+                snack('تمت إضافة الادخار والمكافأة.');
+              },
+              child: const Text('إيداع'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(amount.dispose);
+  }
+
+  void showAddInventoryDialog() {
+    final TextEditingController name = TextEditingController();
+    final TextEditingController quantity = TextEditingController();
+    final TextEditingController price = TextEditingController();
+    final TextEditingController minimum = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('إضافة صنف للجرد'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  controller: name,
+                  decoration: const InputDecoration(labelText: 'اسم الصنف'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: quantity,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'الكمية'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: price,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'سعر الوحدة'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: minimum,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'حد التنبيه'),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  _inventory.add(
+                    InventoryItem(
+                      id: DateTime.now()
+                          .microsecondsSinceEpoch
+                          .toString(),
+                      name: name.text.trim().isEmpty
+                          ? 'صنف بدون اسم'
+                          : name.text.trim(),
+                      quantity: parseDouble(quantity.text) ?? 0.0,
+                      unitPrice: parseDouble(price.text) ?? 0.0,
+                      minimumQuantity: parseDouble(minimum.text) ?? 0.0,
+                    ),
+                  );
+                });
+
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      name.dispose();
+      quantity.dispose();
+      price.dispose();
+      minimum.dispose();
+    });
+  }
+
+  void showInventorySaleDialog(InventoryItem item) {
+    final TextEditingController quantity = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('بيع من ${item.name}'),
+          content: TextField(
+            controller: quantity,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: const InputDecoration(labelText: 'الكمية المباعة'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final double? sold = parseDouble(quantity.text);
+
+                if (sold == null || sold <= 0.0 || sold > item.quantity) {
+                  snack('الكمية غير صالحة أو أكبر من المخزون.', error: true);
+                  return;
+                }
+
+                setState(() {
+                  item.quantity -= sold;
+                });
+
+                Navigator.pop(dialogContext);
+                snack('تم خصم ${money(sold)} وحدة من الجرد.');
+              },
+              child: const Text('تأكيد البيع'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(quantity.dispose);
+  }
+
+  void showProfileDialog() {
+    final TextEditingController name =
+        TextEditingController(text: _profileName);
+    final TextEditingController phone =
+        TextEditingController(text: _profilePhone);
+    final TextEditingController avatar =
+        TextEditingController(text: _profileAvatar);
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('تعديل الملف الشخصي'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'الاسم'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: phone,
+                decoration: const InputDecoration(labelText: 'الهاتف'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: avatar,
+                maxLength: 3,
+                decoration: const InputDecoration(
+                  labelText: 'أحرف الصورة',
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  _profileName = name.text.trim().isEmpty
+                      ? _profileName
+                      : name.text.trim();
+
+                  _profilePhone = phone.text.trim().isEmpty
+                      ? _profilePhone
+                      : phone.text.trim();
+
+                  _profileAvatar = avatar.text.trim().isEmpty
+                      ? _profileAvatar
+                      : avatar.text.trim().toUpperCase();
+                });
+
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      name.dispose();
+      phone.dispose();
+      avatar.dispose();
+    });
+  }
 }
 
-class PageHeader extends StatelessWidget {
-  const PageHeader({
+class AppHeader extends StatelessWidget {
+  const AppHeader({
     super.key,
     required this.title,
     required this.subtitle,
@@ -1714,91 +2006,167 @@ class PageHeader extends StatelessWidget {
   }
 }
 
+class SectionCard extends StatelessWidget {
+  const SectionCard({
+    super.key,
+    required this.section,
+    required this.balance,
+    required this.onAddOperation,
+    required this.onTransfer,
+  });
+
+  final FinancialSection section;
+  final String balance;
+  final VoidCallback onAddOperation;
+  final VoidCallback onTransfer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                CircleAvatar(
+                  backgroundColor: section.color.withOpacity(0.15),
+                  foregroundColor: section.color,
+                  child: Icon(section.icon),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        section.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        section.description,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$balance ${section.currency}',
+                  style: TextStyle(
+                    color: section.color,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onAddOperation,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('عملية'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onTransfer,
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    label: const Text('تحويل'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class LedgerCard extends StatelessWidget {
   const LedgerCard({
     super.key,
     required this.entry,
     required this.amount,
-    required this.onReminder,
-    required this.onLongPress,
-    required this.onTap,
+    required this.onWhatsApp,
+    required this.onDelete,
   });
 
   final LedgerEntry entry;
   final String amount;
-  final VoidCallback onReminder;
-  final VoidCallback onLongPress;
-  final VoidCallback onTap;
+  final VoidCallback onWhatsApp;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final bool client = entry.type == LedgerType.client;
-    final Color color = client ? AppColors.success : AppColors.danger;
+    final bool positive = entry.balance >= 0.0;
+    final Color color =
+        positive ? AppColors.success : AppColors.danger;
 
     return Card(
       elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: <Widget>[
-              CircleAvatar(
-                backgroundColor: color.withOpacity(0.12),
-                foregroundColor: color,
-                child: Icon(
-                  entry.type == LedgerType.client
-                      ? Icons.person_outline_rounded
-                      : entry.type == LedgerType.vendor
-                          ? Icons.storefront_outlined
-                          : Icons.badge_outlined,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      entry.name,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${entry.notes} • ${entry.dateLabel}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                children: <Widget>[
-                  Text(
-                    amount,
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'واتساب',
-                    onPressed: onReminder,
-                    icon: const Icon(
-                      Icons.chat_rounded,
-                      color: Color(0xFF25D366),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.12),
+          foregroundColor: color,
+          child: Icon(
+            entry.type == LedgerType.client
+                ? Icons.person_outline_rounded
+                : entry.type == LedgerType.vendor
+                    ? Icons.storefront_outlined
+                    : Icons.badge_outlined,
           ),
+        ),
+        title: Text(
+          entry.name,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Text(
+          'له: ${entry.credit.toStringAsFixed(0)} • عليه: ${entry.debit.toStringAsFixed(0)}',
+        ),
+        trailing: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  amount,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(entry.currency),
+              ],
+            ),
+            IconButton(
+              tooltip: 'مطالبة واتساب',
+              onPressed: onWhatsApp,
+              icon: const Icon(
+                Icons.chat_rounded,
+                color: Color(0xFF25D366),
+              ),
+            ),
+            IconButton(
+              tooltip: 'حذف',
+              onPressed: onDelete,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.danger,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1810,33 +2178,31 @@ class TransactionCard extends StatelessWidget {
     super.key,
     required this.item,
     required this.amount,
+    required this.section,
     required this.selectionMode,
     required this.selected,
     required this.onChanged,
   });
 
-  final TransactionRecord item;
+  final FinancialTransaction item;
   final String amount;
+  final String section;
   final bool selectionMode;
   final bool selected;
   final ValueChanged<bool?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final bool income = item.type == TransactionType.income;
-    final Color color = income ? AppColors.success : AppColors.danger;
+    final bool entered = item.type == TransactionType.income ||
+        item.type == TransactionType.transferIn;
+
+    final Color color =
+        entered ? AppColors.success : AppColors.danger;
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: selected ? AppColors.emerald : Colors.transparent,
-          width: 1.4,
-        ),
-      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(13),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -1849,7 +2215,7 @@ class TransactionCard extends StatelessWidget {
               backgroundColor: color.withOpacity(0.12),
               foregroundColor: color,
               child: Icon(
-                income
+                entered
                     ? Icons.south_west_rounded
                     : Icons.north_east_rounded,
               ),
@@ -1863,26 +2229,24 @@ class TransactionCard extends StatelessWidget {
                     item.title,
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
-                    '${item.category} • ${item.dateLabel}',
+                    '$section • ${item.category} • ${item.dateLabel}',
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
-                    item.notes,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    'إلى/من: ${item.counterparty} • ${item.paymentMethod}',
                     style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
             ),
             Text(
-              '${income ? '+' : '-'}$amount',
+              '${entered ? '+' : '-'}$amount',
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.w900,
@@ -1895,111 +2259,23 @@ class TransactionCard extends StatelessWidget {
   }
 }
 
-class CurrencyConverter extends StatefulWidget {
-  const CurrencyConverter({
+class NumberEditor extends StatefulWidget {
+  const NumberEditor({
     super.key,
-    required this.arabicDigits,
-    required this.yerPerSar,
-    required this.yerPerUsd,
-  });
-
-  final bool arabicDigits;
-  final double yerPerSar;
-  final double yerPerUsd;
-
-  @override
-  State<CurrencyConverter> createState() => _CurrencyConverterState();
-}
-
-class _CurrencyConverterState extends State<CurrencyConverter> {
-  final TextEditingController _controller = TextEditingController();
-  double _yer = 0.0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final String sar = formatAmount(
-      _yer / widget.yerPerSar,
-      arabicDigits: widget.arabicDigits,
-    );
-
-    final String usd = formatAmount(
-      _yer / widget.yerPerUsd,
-      arabicDigits: widget.arabicDigits,
-    );
-
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Row(
-              children: <Widget>[
-                Icon(
-                  Icons.currency_exchange_rounded,
-                  color: AppColors.emerald,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'محول العملات الذكي',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'المبلغ بالريال اليمني',
-                suffixText: 'YER',
-              ),
-              onChanged: (String value) {
-                setState(() {
-                  _yer = parseDouble(value) ?? 0.0;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            Text('ريال سعودي: $sar SAR'),
-            const SizedBox(height: 6),
-            Text('دولار أمريكي: $usd USD'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class NumberSetting extends StatefulWidget {
-  const NumberSetting({
-    super.key,
-    required this.label,
+    required this.title,
     required this.value,
     required this.onSave,
   });
 
-  final String label;
+  final String title;
   final double value;
   final ValueChanged<double> onSave;
 
   @override
-  State<NumberSetting> createState() => _NumberSettingState();
+  State<NumberEditor> createState() => _NumberEditorState();
 }
 
-class _NumberSettingState extends State<NumberSetting> {
+class _NumberEditorState extends State<NumberEditor> {
   late final TextEditingController _controller;
 
   @override
@@ -2011,7 +2287,7 @@ class _NumberSettingState extends State<NumberSetting> {
   }
 
   @override
-  void didUpdateWidget(covariant NumberSetting oldWidget) {
+  void didUpdateWidget(covariant NumberEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.value != widget.value) {
@@ -2029,9 +2305,11 @@ class _NumberSettingState extends State<NumberSetting> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      keyboardType: const TextInputType.numberWithOptions(
+        decimal: true,
+      ),
       decoration: InputDecoration(
-        labelText: widget.label,
+        labelText: widget.title,
         suffixIcon: IconButton(
           icon: const Icon(Icons.check_rounded),
           onPressed: () {
@@ -2047,8 +2325,8 @@ class _NumberSettingState extends State<NumberSetting> {
   }
 }
 
-class EmptyBox extends StatelessWidget {
-  const EmptyBox({
+class EmptyStateBox extends StatelessWidget {
+  const EmptyStateBox({
     super.key,
     required this.icon,
     required this.title,
@@ -2066,7 +2344,11 @@ class EmptyBox extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(icon, size: 48, color: AppColors.muted),
+          Icon(
+            icon,
+            size: 48,
+            color: AppColors.muted,
+          ),
           const SizedBox(height: 10),
           Text(
             title,
@@ -2092,7 +2374,7 @@ class BrandFooter extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 18),
       child: Text(
-        '© 2026 جميع الحقوق محفوظة لـ محاسبي | صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان (هاتف: 0967775592894)',
+        '© 2026 جميع الحقوق محفوظة لـ محاسبي الشامل | صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان (هاتف: 0967775592894)',
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AppColors.muted,
@@ -2102,35 +2384,6 @@ class BrandFooter extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-Widget detailLine(String title, String value) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: RichText(
-      text: TextSpan(
-        style: const TextStyle(color: Colors.black87),
-        children: <TextSpan>[
-          TextSpan(
-            text: '$title: ',
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          TextSpan(text: value),
-        ],
-      ),
-    ),
-  );
-}
-
-String ledgerTypeTitle(LedgerType type) {
-  switch (type) {
-    case LedgerType.client:
-      return 'عميل';
-    case LedgerType.vendor:
-      return 'مورد';
-    case LedgerType.worker:
-      return 'عامل';
   }
 }
 
@@ -2148,25 +2401,26 @@ double? parseDouble(String value) {
   return double.tryParse(normalized);
 }
 
-String formatAmount(
+String formatMoney(
   double amount, {
   required bool arabicDigits,
 }) {
   final bool negative = amount.isNegative;
   final String source = amount.abs().toStringAsFixed(0);
-  final StringBuffer result = StringBuffer();
+  final StringBuffer output = StringBuffer();
 
   for (int index = 0; index < source.length; index++) {
     final int remaining = source.length - index;
 
-    result.write(source[index]);
+    output.write(source[index]);
 
     if (remaining > 1 && remaining % 3 == 1) {
-      result.write(',');
+      output.write(',');
     }
   }
 
-  final String formatted = negative ? '-$result' : result.toString();
+  final String formatted =
+      negative ? '-${output.toString()}' : output.toString();
 
   return arabicDigits ? toArabicDigits(formatted) : formatted;
 }
@@ -2185,11 +2439,13 @@ String toArabicDigits(String value) {
     '9': '٩',
   };
 
-  return value.split('').map((String char) => digits[char] ?? char).join();
+  return value
+      .split('')
+      .map((String item) => digits[item] ?? item)
+      .join();
 }
 
-// This function requires a strict, non-null String.
-// The caller always uses: entry.phone ?? ''.
+// Strict String input: null handling occurs before calling this function.
 String normalizeYemeniPhone(String value) {
   String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
 
@@ -2206,4 +2462,15 @@ String normalizeYemeniPhone(String value) {
   }
 
   return cleaned;
+}
+
+String ledgerTypeName(LedgerType type) {
+  switch (type) {
+    case LedgerType.client:
+      return 'عميل';
+    case LedgerType.vendor:
+      return 'مورد';
+    case LedgerType.worker:
+      return 'عامل';
+  }
 }
