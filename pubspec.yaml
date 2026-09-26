@@ -1,7 +1,6 @@
 name: yemen_finance
-description: تطبيق الموازنة والمحفظة المالية اليمنية
+description: تطبيق الموازنة والمحفظة المالية اليمنية الذكي - محاسبي
 publish_to: "none"
-
 version: 1.0.0+1
 
 environment:
