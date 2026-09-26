@@ -1,7 +1,7 @@
 workflows:
   default-workflow:
     name: Yemen Finance Build
-    max_build_duration: 10
+    max_build_duration: 15
     instance_type: mac_mini_m2
     cache:
       cache_paths:
@@ -15,11 +15,13 @@ workflows:
     scripts:
       - name: Setup Flutter Project Structure
         script: |
-          echo "جاري تهيئة الهيكل الحديث المتوافق لنظام الأرقم المالي..."
+          echo "جاري تهيئة الهيكل الصافي والمتوافق لنظام الأرقم المالي..."
           mkdir -p lib
-          mv main.dart lib/main.dart || true
-          # هنا نجبر الفلاتر على إنشاء مجلد أندرويد حديث يدعم v2 embedding تلقائياً
-          flutter create . --platforms=android --force
+          if [ -f main.dart ]; then
+            mv main.dart lib/main.dart
+          fi
+          # تم تصحيح الأمر وحذف أي خيارات ملغية لتهيئة مشروع أندرويد سليم
+          flutter create . --platforms=android
       - name: Flutter Packages Get
         script: |
           flutter packages get
