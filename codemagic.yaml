@@ -3,7 +3,6 @@ workflows:
     name: Yemen Finance Build
     max_build_duration: 10
     instance_type: mac_mini_m2
-    # هنا تم تفعيل الكاش الذكي لحفظ الحزم واختصار وقت التحميل والتثبيت
     cache:
       cache_paths:
         - $FLUTTER_ROOT/.pub-cache
@@ -16,9 +15,11 @@ workflows:
     scripts:
       - name: Setup Flutter Project Structure
         script: |
-          echo "جاري تهيئة هيكل المشروع اليمني تلقائياً..."
-          mkdir -p lib android
-          mv main.dart lib/main.dart
+          echo "جاري تهيئة الهيكل الحديث المتوافق لنظام الأرقم المالي..."
+          mkdir -p lib
+          mv main.dart lib/main.dart || true
+          # هنا نجبر الفلاتر على إنشاء مجلد أندرويد حديث يدعم v2 embedding تلقائياً
+          flutter create . --platforms=android --force
       - name: Flutter Packages Get
         script: |
           flutter packages get
