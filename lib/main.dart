@@ -3,220 +3,1229 @@ import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BudgetWalletApp());
+  runApp(const MuhasibiApp());
 }
 
-class BudgetWalletApp extends StatelessWidget {
-  const BudgetWalletApp({super.key});
+class MuhasibiApp extends StatefulWidget {
+  const MuhasibiApp({super.key});
+
+  @override
+  State<MuhasibiApp> createState() => _MuhasibiAppState();
+}
+
+class _MuhasibiAppState extends State<MuhasibiApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+  bool _useArabicNumerals = false;
+  FontHierarchy _fontHierarchy = FontHierarchy.system;
+
+  void _updateThemeMode(ThemeMode value) {
+    setState(() {
+      _themeMode = value;
+    });
+  }
+
+  void _updateArabicNumerals(bool value) {
+    setState(() {
+      _useArabicNumerals = value;
+    });
+  }
+
+  void _updateFontHierarchy(FontHierarchy value) {
+    setState(() {
+      _fontHierarchy = value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF00695C);
+    final TextTheme textTheme = _buildTextTheme(_fontHierarchy);
 
     return MaterialApp(
+      title: 'محاسبي',
       debugShowCheckedModeBanner: false,
-      title: 'الموازنة والمحفظة',
+      themeMode: _themeMode,
       theme: ThemeData(
         useMaterial3: true,
+        brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
+          seedColor: AppColors.emerald,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF6F8F7),
+        scaffoldBackgroundColor: const Color(0xFFF4F8F6),
+        textTheme: textTheme,
         appBarTheme: const AppBarTheme(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          centerTitle: true,
+          backgroundColor: Colors.transparent,
           elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          centerTitle: false,
+          foregroundColor: AppColors.ink,
         ),
       ),
-      home: const Directionality(
-        textDirection: TextDirection.rtl,
-        child: DashboardPage(),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.emeraldLight,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF101716),
+        textTheme: textTheme,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: false,
+        ),
       ),
+      builder: (BuildContext context, Widget? child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      home: MuhasibiHome(
+        useArabicNumerals: _useArabicNumerals,
+        themeMode: _themeMode,
+        fontHierarchy: _fontHierarchy,
+        onThemeModeChanged: _updateThemeMode,
+        onArabicNumeralsChanged: _updateArabicNumerals,
+        onFontHierarchyChanged: _updateFontHierarchy,
+      ),
+    );
+  }
+
+  TextTheme _buildTextTheme(FontHierarchy hierarchy) {
+    final String? fontFamily;
+
+    switch (hierarchy) {
+      case FontHierarchy.system:
+        fontFamily = null;
+      case FontHierarchy.serif:
+        fontFamily = 'serif';
+      case FontHierarchy.monospace:
+        fontFamily = 'monospace';
+    }
+
+    return Typography.material2021().black.apply(
+      fontFamily: fontFamily,
+      bodyColor: AppColors.ink,
+      displayColor: AppColors.ink,
     );
   }
 }
 
-class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+enum FontHierarchy {
+  system,
+  serif,
+  monospace,
+}
+
+class AppColors {
+  static const Color emerald = Color(0xFF00695C);
+  static const Color emeraldDark = Color(0xFF004D40);
+  static const Color emeraldLight = Color(0xFF15A38A);
+  static const Color gold = Color(0xFFE2B333);
+  static const Color ink = Color(0xFF17201E);
+  static const Color muted = Color(0xFF66706D);
+  static const Color danger = Color(0xFFC62828);
+  static const Color income = Color(0xFF15803D);
+  static const Color expense = Color(0xFFB91C1C);
+  static const Color card = Colors.white;
+}
+
+class MuhasibiHome extends StatefulWidget {
+  const MuhasibiHome({
+    super.key,
+    required this.useArabicNumerals,
+    required this.themeMode,
+    required this.fontHierarchy,
+    required this.onThemeModeChanged,
+    required this.onArabicNumeralsChanged,
+    required this.onFontHierarchyChanged,
+  });
+
+  final bool useArabicNumerals;
+  final ThemeMode themeMode;
+  final FontHierarchy fontHierarchy;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
+  final ValueChanged<bool> onArabicNumeralsChanged;
+  final ValueChanged<FontHierarchy> onFontHierarchyChanged;
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<MuhasibiHome> createState() => _MuhasibiHomeState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
-  static const String whatsappNumber = '967777123456';
+class _MuhasibiHomeState extends State<MuhasibiHome> {
+  int _currentIndex = 0;
 
-  final List<TransactionData> _transactions = [
-    const TransactionData(
-      title: 'إيداع راتب',
-      category: 'دخل',
-      date: '24 يونيو 2023',
-      amount: 150000,
-      isIncome: true,
-      icon: Icons.work_rounded,
-    ),
-    const TransactionData(
-      title: 'سوبر ماركت السعيدة',
-      category: 'تسوق',
-      date: '23 يونيو 2023',
-      amount: 12500,
-      isIncome: false,
-      icon: Icons.shopping_cart_rounded,
-    ),
-    const TransactionData(
-      title: 'فاتورة الكهرباء',
-      category: 'خدمات',
-      date: '22 يونيو 2023',
-      amount: 8200,
-      isIncome: false,
-      icon: Icons.electric_bolt_rounded,
-    ),
-    const TransactionData(
-      title: 'تحويل مالي',
-      category: 'إضافي',
-      date: '20 يونيو 2023',
-      amount: 45000,
-      isIncome: true,
-      icon: Icons.swap_horiz_rounded,
-    ),
-  ];
+  final FinancialController _controller = FinancialController.demo();
 
-  double get _totalIncome {
-    return _transactions
-        .where((transaction) => transaction.isIncome)
-        .fold(655000, (sum, transaction) => sum + transaction.amount);
+  final UserProfile _profile = UserProfile(
+    fullName: 'أبو علي لقمان',
+    avatarLetters: 'AL',
+    phone: '967777123456',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      WalletDashboardTab(
+        controller: _controller,
+        useArabicNumerals: widget.useArabicNumerals,
+        onChanged: _refresh,
+      ),
+      TransactionsTab(
+        controller: _controller,
+        useArabicNumerals: widget.useArabicNumerals,
+        onChanged: _refresh,
+      ),
+      DebtLedgerTab(
+        controller: _controller,
+        useArabicNumerals: widget.useArabicNumerals,
+        onChanged: _refresh,
+      ),
+      ProfileTab(
+        profile: _profile,
+        themeMode: widget.themeMode,
+        fontHierarchy: widget.fontHierarchy,
+        useArabicNumerals: widget.useArabicNumerals,
+        onThemeModeChanged: widget.onThemeModeChanged,
+        onFontHierarchyChanged: widget.onFontHierarchyChanged,
+        onArabicNumeralsChanged: widget.onArabicNumeralsChanged,
+        onProfileChanged: _refresh,
+      ),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        height: 76,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        onDestinationSelected: (int index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+            label: 'المحافظ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'العمليات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.handshake_outlined),
+            selectedIcon: Icon(Icons.handshake_rounded),
+            label: 'الديون',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'الملف الشخصي',
+          ),
+        ],
+      ),
+    );
   }
 
-  double get _totalExpenses {
-    return _transactions
-        .where((transaction) => !transaction.isIncome)
-        .fold(378550, (sum, transaction) => sum + transaction.amount);
+  void _refresh() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+}
+
+class FinancialController {
+  FinancialController({
+    required List<WalletFolder> wallets,
+    required List<TransactionRecord> transactions,
+    required List<DebtRecord> debts,
+  })  : _wallets = wallets,
+        _transactions = transactions,
+        _debts = debts;
+
+  factory FinancialController.demo() {
+    return FinancialController(
+      wallets: [
+        WalletFolder(
+          id: 'daily',
+          title: 'المصروفات اليومية',
+          subtitle: 'احتياجات المنزل والتنقل',
+          balance: 50000.0,
+          icon: Icons.shopping_basket_rounded,
+          color: const Color(0xFF0284C7),
+        ),
+        WalletFolder(
+          id: 'jamiya',
+          title: 'الجمعية والادخار',
+          subtitle: 'التزام شهري محفوظ',
+          balance: 20000.0,
+          icon: Icons.savings_rounded,
+          color: const Color(0xFF7C3AED),
+        ),
+        WalletFolder(
+          id: 'strategic',
+          title: 'الادخار الاستراتيجي',
+          subtitle: 'أهداف طويلة المدى',
+          balance: 30000.0,
+          icon: Icons.trending_up_rounded,
+          color: const Color(0xFF0F766E),
+        ),
+      ],
+      transactions: [
+        TransactionRecord(
+          id: 't1',
+          title: 'راتب شهر يونيو',
+          category: 'دخل',
+          dateLabel: '24 يونيو 2026 م | 8 محرم 1448 هـ',
+          notes: 'تم استلام الراتب وتحويله تلقائياً إلى المحافظ.',
+          label: 'Received salary',
+          amount: 100000.0,
+          type: TransactionType.income,
+          createdAt: DateTime(2026, 6, 24),
+        ),
+        TransactionRecord(
+          id: 't2',
+          title: 'قسط دين عائلي',
+          category: 'التزامات',
+          dateLabel: '23 يونيو 2026 م | 7 محرم 1448 هـ',
+          notes: 'سداد جزء من التزام سابق.',
+          label: 'Paid off debt',
+          amount: 12500.0,
+          type: TransactionType.expense,
+          createdAt: DateTime(2026, 6, 23),
+        ),
+        TransactionRecord(
+          id: 't3',
+          title: 'تحويل للأسرة',
+          category: 'تحويلات',
+          dateLabel: '21 يونيو 2026 م | 5 محرم 1448 هـ',
+          notes: 'مساعدة مالية شهرية للأسرة.',
+          label: 'Sent to family',
+          amount: 8200.0,
+          type: TransactionType.expense,
+          createdAt: DateTime(2026, 6, 21),
+        ),
+      ],
+      debts: [
+        DebtRecord(
+          id: 'd1',
+          name: 'أحمد محمد',
+          phone: '967771234567',
+          category: 'عميل',
+          amount: 85000.0,
+          note: 'قيمة بضاعة مستحقة',
+          dueDateLabel: 'مستحق في 30 يونيو 2026',
+          isReceivable: true,
+        ),
+        DebtRecord(
+          id: 'd2',
+          name: 'متجر النور',
+          phone: '967739876543',
+          category: 'مورد',
+          amount: 46000.0,
+          note: 'رصيد توريد مواد',
+          dueDateLabel: 'مستحق في 5 يوليو 2026',
+          isReceivable: false,
+        ),
+      ],
+    );
   }
 
-  double get _balance => _totalIncome - _totalExpenses;
+  final List<WalletFolder> _wallets;
+  final List<TransactionRecord> _transactions;
+  final List<DebtRecord> _debts;
 
-  String _formatAmount(num amount) {
-    final String value = amount.toStringAsFixed(0);
-    final StringBuffer formatted = StringBuffer();
+  List<WalletFolder> get wallets => List<WalletFolder>.unmodifiable(_wallets);
 
-    for (int index = 0; index < value.length; index++) {
-      final int remaining = value.length - index;
+  List<TransactionRecord> get transactions =>
+      List<TransactionRecord>.unmodifiable(_transactions);
 
-      formatted.write(value[index]);
+  List<DebtRecord> get debts => List<DebtRecord>.unmodifiable(_debts);
 
-      if (remaining > 1 && remaining % 3 == 1) {
-        formatted.write(',');
-      }
+  double get totalWalletBalance {
+    return _wallets.fold<double>(
+      0.0,
+      (double sum, WalletFolder wallet) => sum + wallet.balance,
+    );
+  }
+
+  double get totalIncome {
+    return _transactions
+        .where((TransactionRecord item) => item.type == TransactionType.income)
+        .fold<double>(
+          0.0,
+          (double sum, TransactionRecord item) => sum + item.amount,
+        );
+  }
+
+  double get totalExpenses {
+    return _transactions
+        .where((TransactionRecord item) => item.type == TransactionType.expense)
+        .fold<double>(
+          0.0,
+          (double sum, TransactionRecord item) => sum + item.amount,
+        );
+  }
+
+  double get netBalance => totalWalletBalance;
+
+  double get totalReceivables {
+    return _debts
+        .where((DebtRecord item) => item.isReceivable)
+        .fold<double>(
+          0.0,
+          (double sum, DebtRecord item) => sum + item.amount,
+        );
+  }
+
+  double get totalPayables {
+    return _debts
+        .where((DebtRecord item) => !item.isReceivable)
+        .fold<double>(
+          0.0,
+          (double sum, DebtRecord item) => sum + item.amount,
+        );
+  }
+
+  SalaryAllocation allocateSalary({
+    required double salaryAmount,
+    required String title,
+    required String dateLabel,
+    required String notes,
+  }) {
+    final double cleanAmount = salaryAmount.isFinite && salaryAmount > 0.0
+        ? salaryAmount
+        : 0.0;
+
+    final double jamiyaAmount =
+        cleanAmount >= 20000.0 ? 20000.0 : cleanAmount;
+
+    final double afterJamiya = cleanAmount - jamiyaAmount;
+
+    final double dailyAmount =
+        afterJamiya >= 50000.0 ? 50000.0 : afterJamiya;
+
+    final double strategicAmount = afterJamiya - dailyAmount;
+
+    _walletById('jamiya').balance += jamiyaAmount;
+    _walletById('daily').balance += dailyAmount;
+    _walletById('strategic').balance += strategicAmount;
+
+    _transactions.insert(
+      0,
+      TransactionRecord(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        title: title.trim().isEmpty ? 'راتب وارد' : title.trim(),
+        category: 'دخل',
+        dateLabel: dateLabel.trim().isEmpty
+            ? 'تاريخ مُدخل يدوياً'
+            : dateLabel.trim(),
+        notes: notes.trim().isEmpty
+            ? 'تم التوزيع التلقائي بين المحافظ.'
+            : notes.trim(),
+        label: 'Received salary',
+        amount: cleanAmount,
+        type: TransactionType.income,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    return SalaryAllocation(
+      originalAmount: cleanAmount,
+      jamiyaAmount: jamiyaAmount,
+      dailyAmount: dailyAmount,
+      strategicAmount: strategicAmount,
+    );
+  }
+
+  void deleteTransaction(String id) {
+    _transactions.removeWhere((TransactionRecord item) => item.id == id);
+  }
+
+  void updateTransaction(TransactionRecord updatedRecord) {
+    final int index = _transactions.indexWhere(
+      (TransactionRecord item) => item.id == updatedRecord.id,
+    );
+
+    if (index >= 0) {
+      _transactions[index] = updatedRecord;
+    }
+  }
+
+  WalletFolder _walletById(String id) {
+    return _wallets.firstWhere(
+      (WalletFolder wallet) => wallet.id == id,
+    );
+  }
+
+  String buildTransactionReport(Iterable<TransactionRecord> records) {
+    final List<TransactionRecord> data = records.toList();
+
+    final StringBuffer report = StringBuffer();
+    report.writeln('تقرير محاسبي المالي');
+    report.writeln('صُنع بواسطة نظام أبو علي لقمان — ABOALILUQMAN');
+    report.writeln('عدد السجلات: ${data.length}');
+    report.writeln('----------------------------------------');
+
+    for (final TransactionRecord item in data) {
+      final String direction =
+          item.type == TransactionType.income ? 'دخل' : 'مصروف';
+
+      report.writeln('العنوان: ${item.title}');
+      report.writeln('النوع: $direction');
+      report.writeln('التصنيف: ${item.category}');
+      report.writeln('المبلغ: ${formatYemeniAmount(item.amount)} ريال يمني');
+      report.writeln('التاريخ: ${item.dateLabel}');
+      report.writeln('الوسم: ${item.label}');
+      report.writeln('ملاحظات: ${item.notes}');
+      report.writeln('----------------------------------------');
     }
 
-    return formatted.toString();
+    return report.toString();
+  }
+}
+
+class WalletFolder {
+  WalletFolder({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.balance,
+    required this.icon,
+    required this.color,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  double balance;
+  final IconData icon;
+  final Color color;
+}
+
+enum TransactionType {
+  income,
+  expense,
+}
+
+class TransactionRecord {
+  TransactionRecord({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.dateLabel,
+    required this.notes,
+    required this.label,
+    required this.amount,
+    required this.type,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final String category;
+  final String dateLabel;
+  final String notes;
+  final String label;
+  final double amount;
+  final TransactionType type;
+  final DateTime createdAt;
+
+  TransactionRecord copyWith({
+    String? title,
+    String? category,
+    String? dateLabel,
+    String? notes,
+    String? label,
+    double? amount,
+    TransactionType? type,
+  }) {
+    return TransactionRecord(
+      id: id,
+      title: title ?? this.title,
+      category: category ?? this.category,
+      dateLabel: dateLabel ?? this.dateLabel,
+      notes: notes ?? this.notes,
+      label: label ?? this.label,
+      amount: amount ?? this.amount,
+      type: type ?? this.type,
+      createdAt: createdAt,
+    );
+  }
+}
+
+class DebtRecord {
+  DebtRecord({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.category,
+    required this.amount,
+    required this.note,
+    required this.dueDateLabel,
+    required this.isReceivable,
+  });
+
+  final String id;
+  final String name;
+  final String phone;
+  final String category;
+  final double amount;
+  final String note;
+  final String dueDateLabel;
+  final bool isReceivable;
+}
+
+class SalaryAllocation {
+  const SalaryAllocation({
+    required this.originalAmount,
+    required this.jamiyaAmount,
+    required this.dailyAmount,
+    required this.strategicAmount,
+  });
+
+  final double originalAmount;
+  final double jamiyaAmount;
+  final double dailyAmount;
+  final double strategicAmount;
+}
+
+class UserProfile {
+  UserProfile({
+    required this.fullName,
+    required this.avatarLetters,
+    required this.phone,
+  });
+
+  String fullName;
+  String avatarLetters;
+  String phone;
+}
+
+class WalletDashboardTab extends StatelessWidget {
+  const WalletDashboardTab({
+    super.key,
+    required this.controller,
+    required this.useArabicNumerals,
+    required this.onChanged,
+  });
+
+  final FinancialController controller;
+  final bool useArabicNumerals;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
+        children: [
+          const PageHeading(
+            title: 'الموازنة والمحفظة',
+            subtitle: 'ملخص مالي ذكي وتنظيم تلقائي للأموال',
+            icon: Icons.account_balance_wallet_rounded,
+          ),
+          const SizedBox(height: 22),
+          _NetBalanceCard(
+            amount: controller.netBalance,
+            useArabicNumerals: useArabicNumerals,
+          ),
+          const SizedBox(height: 20),
+          _SalaryAllocationCard(
+            controller: controller,
+            useArabicNumerals: useArabicNumerals,
+            onChanged: onChanged,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'المحافظ الفرعية',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 12),
+          ...controller.wallets.map(
+            (WalletFolder wallet) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: WalletFolderCard(
+                wallet: wallet,
+                useArabicNumerals: useArabicNumerals,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const BrandFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class _NetBalanceCard extends StatelessWidget {
+  const _NetBalanceCard({
+    required this.amount,
+    required this.useArabicNumerals,
+  });
+
+  final double amount;
+  final bool useArabicNumerals;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.emerald, AppColors.emeraldDark],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.emerald.withOpacity(0.24),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_graph_rounded, color: Color(0xFFFFE9A5)),
+              SizedBox(width: 8),
+              Text(
+                'صافي الرصيد التراكمي',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '${formatYemeniAmount(amount, useArabicNumerals: useArabicNumerals)} ي.ر',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'إجمالي المحافظ بعد التوزيع الذكي',
+            style: TextStyle(
+              color: Color(0xFFD2F4E9),
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SalaryAllocationCard extends StatefulWidget {
+  const _SalaryAllocationCard({
+    required this.controller,
+    required this.useArabicNumerals,
+    required this.onChanged,
+  });
+
+  final FinancialController controller;
+  final bool useArabicNumerals;
+  final VoidCallback onChanged;
+
+  @override
+  State<_SalaryAllocationCard> createState() => _SalaryAllocationCardState();
+}
+
+class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
+  final TextEditingController _salaryController = TextEditingController();
+  final TextEditingController _titleController =
+      TextEditingController(text: 'راتب وارد');
+  final TextEditingController _dateController =
+      TextEditingController(text: 'تاريخ مُدخل يدوياً');
+  final TextEditingController _notesController =
+      TextEditingController(text: 'توزيع تلقائي إلى المحافظ');
+
+  @override
+  void dispose() {
+    _salaryController.dispose();
+    _titleController.dispose();
+    _dateController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
-  String _amountInWords() {
-    return 'رصيدك الحالي بعد احتساب الإيرادات والمصروفات';
+  void _allocate() {
+    final double? amount = parseFlexibleDouble(_salaryController.text);
+
+    if (amount == null || !amount.isFinite || amount <= 0.0) {
+      showAppSnackBar(
+        context,
+        'أدخل مبلغ راتب صحيحًا أكبر من صفر.',
+        isError: true,
+      );
+      return;
+    }
+
+    final SalaryAllocation allocation = widget.controller.allocateSalary(
+      salaryAmount: amount,
+      title: _titleController.text,
+      dateLabel: _dateController.text,
+      notes: _notesController.text,
+    );
+
+    widget.onChanged();
+    _salaryController.clear();
+
+    showAppSnackBar(
+      context,
+      'تم التوزيع: جمعية ${formatYemeniAmount(allocation.jamiyaAmount, useArabicNumerals: widget.useArabicNumerals)}، يومي ${formatYemeniAmount(allocation.dailyAmount, useArabicNumerals: widget.useArabicNumerals)}، استراتيجي ${formatYemeniAmount(allocation.strategicAmount, useArabicNumerals: widget.useArabicNumerals)} ريال.',
+    );
   }
 
-  Future<void> _shareOnWhatsApp() async {
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      color: isDark ? const Color(0xFF192523) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(
+          color: AppColors.emerald.withOpacity(0.16),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Color(0xFFE0F2EE),
+                  foregroundColor: AppColors.emerald,
+                  child: Icon(Icons.account_tree_rounded),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'توزيع الراتب التلقائي',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'يُحوّل أول 20,000 ريال إلى الجمعية، ثم 50,000 ريال إلى المصروفات اليومية، وما تبقى إلى الادخار الاستراتيجي.',
+              style: TextStyle(color: AppColors.muted, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _salaryController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'مبلغ الراتب الوارد',
+                suffixText: 'ريال يمني',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'عنوان العملية',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _dateController,
+              decoration: const InputDecoration(
+                labelText: 'التاريخ الوصفي (ميلادي أو هجري)',
+                hintText: 'مثال: 24 يونيو 2026 م | 8 محرم 1448 هـ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'ملاحظات',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _allocate,
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: const Text('تنفيذ التوزيع الذكي'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WalletFolderCard extends StatelessWidget {
+  const WalletFolderCard({
+    super.key,
+    required this.wallet,
+    required this.useArabicNumerals,
+  });
+
+  final WalletFolder wallet;
+  final bool useArabicNumerals;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      color: isDark ? const Color(0xFF192523) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: wallet.color.withOpacity(0.14),
+          foregroundColor: wallet.color,
+          child: Icon(wallet.icon),
+        ),
+        title: Text(
+          wallet.title,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Text(wallet.subtitle),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              formatYemeniAmount(
+                wallet.balance,
+                useArabicNumerals: useArabicNumerals,
+              ),
+              style: TextStyle(
+                color: wallet.color,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
+            const Text(
+              'ريال يمني',
+              style: TextStyle(fontSize: 11, color: AppColors.muted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TransactionsTab extends StatefulWidget {
+  const TransactionsTab({
+    super.key,
+    required this.controller,
+    required this.useArabicNumerals,
+    required this.onChanged,
+  });
+
+  final FinancialController controller;
+  final bool useArabicNumerals;
+  final VoidCallback onChanged;
+
+  @override
+  State<TransactionsTab> createState() => _TransactionsTabState();
+}
+
+class _TransactionsTabState extends State<TransactionsTab> {
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = <String>{};
+
+  List<TransactionRecord> get _selectedTransactions {
+    return widget.controller.transactions
+        .where((TransactionRecord item) => _selectedIds.contains(item.id))
+        .toList();
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _selectionMode = !_selectionMode;
+      if (!_selectionMode) {
+        _selectedIds.clear();
+      }
+    });
+  }
+
+  void _toggleAll() {
+    final List<TransactionRecord> all = widget.controller.transactions;
+
+    setState(() {
+      if (_selectedIds.length == all.length) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds
+          ..clear()
+          ..addAll(all.map((TransactionRecord item) => item.id));
+      }
+    });
+  }
+
+  void _exportTextReport() {
+    final List<TransactionRecord> records =
+        _selectionMode && _selectedIds.isNotEmpty
+            ? _selectedTransactions
+            : widget.controller.transactions;
+
+    final String report = widget.controller.buildTransactionReport(records);
+
+    debugPrint(report);
+
+    showAppSnackBar(
+      context,
+      'تم تجهيز تقرير TXT شامل ونظيف لـ ${records.length} عملية. هذه النسخة المستقلة تُنشئ النص وتبلّغك بالنجاح؛ حفظ ملف فعلي يتطلب إضافة صلاحيات/مكتبة تخزين غير مسموحة ضمن قيودك الحالية.',
+    );
+  }
+
+  Future<void> _showTransactionActions(TransactionRecord record) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.visibility_rounded),
+                  title: const Text('عرض التفاصيل'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showDetails(record);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded),
+                  title: const Text('تعديل'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showEditDialog(record);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.share_rounded),
+                  title: const Text('مشاركة'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showShareText(record);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.print_rounded),
+                  title: const Text('طباعة'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    showAppSnackBar(
+                      context,
+                      'تم تجهيز سجل العملية للطباعة. الطباعة الفعلية تحتاج حزمة طباعة إضافية غير مشمولة في هذا الملف.',
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: AppColors.danger,
+                  ),
+                  title: const Text(
+                    'حذف',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _confirmDelete(record);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDetails(TransactionRecord record) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(record.title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DetailLine(label: 'التصنيف', value: record.category),
+                _DetailLine(
+                  label: 'المبلغ',
+                  value:
+                      '${formatYemeniAmount(record.amount, useArabicNumerals: widget.useArabicNumerals)} ريال يمني',
+                ),
+                _DetailLine(label: 'التاريخ', value: record.dateLabel),
+                _DetailLine(label: 'الوسم', value: record.label),
+                _DetailLine(label: 'الملاحظات', value: record.notes),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showShareText(TransactionRecord record) {
     final String message = '''
-ملخص الموازنة والمحفظة:
-
-الرصيد المتبقي: ${_formatAmount(_balance)} ريال يمني
-إجمالي الدخل: ${_formatAmount(_totalIncome)} ريال يمني
-إجمالي المصروفات: ${_formatAmount(_totalExpenses)} ريال يمني
-
-صُنع بواسطة ABOALILUQMAN — أبو علي لقمان
+عملية مالية من تطبيق محاسبي:
+العنوان: ${record.title}
+التصنيف: ${record.category}
+المبلغ: ${formatYemeniAmount(record.amount, useArabicNumerals: widget.useArabicNumerals)} ريال يمني
+التاريخ: ${record.dateLabel}
+الوسم: ${record.label}
+الملاحظات: ${record.notes}
 ''';
 
-    final Uri whatsappUri = Uri.parse(
-      'https://wa.me/$whatsappNumber?text=${Uri.encodeComponent(message)}',
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('نص المشاركة'),
+          content: SelectableText(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        );
+      },
     );
-
-    final bool opened = await launchUrl(
-      whatsappUri,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'تعذر فتح واتساب. تأكد من تثبيت التطبيق وصحة رقم الهاتف.',
-          ),
-        ),
-      );
-    }
   }
 
-  Future<void> _showAddTransactionDialog() async {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController amountController = TextEditingController();
+  void _showEditDialog(TransactionRecord record) {
+    final TextEditingController titleController =
+        TextEditingController(text: record.title);
+    final TextEditingController categoryController =
+        TextEditingController(text: record.category);
+    final TextEditingController amountController =
+        TextEditingController(text: record.amount.toString());
+    final TextEditingController dateController =
+        TextEditingController(text: record.dateLabel);
+    final TextEditingController notesController =
+        TextEditingController(text: record.notes);
+    final TextEditingController labelController =
+        TextEditingController(text: record.label);
 
-    bool isIncome = true;
-    IconData selectedIcon = Icons.account_balance_wallet_rounded;
+    TransactionType selectedType = record.type;
 
-    await showDialog<void>(
+    showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
             return AlertDialog(
-              title: const Text('إضافة عملية جديدة'),
+              title: const Text('تعديل العملية'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: titleController,
-                      textDirection: TextDirection.rtl,
-                      decoration: const InputDecoration(
-                        labelText: 'اسم العملية',
-                        hintText: 'مثال: راتب أو فاتورة مياه',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(labelText: 'العنوان'),
                     ),
-                    const SizedBox(height: 14),
+                    TextField(
+                      controller: categoryController,
+                      decoration:
+                          const InputDecoration(labelText: 'التصنيف'),
+                    ),
                     TextField(
                       controller: amountController,
-                      textDirection: TextDirection.rtl,
                       keyboardType: const TextInputType.numberWithOptions(
-                        decimal: false,
+                        decimal: true,
                       ),
-                      decoration: const InputDecoration(
-                        labelText: 'المبلغ بالريال اليمني',
-                        hintText: 'مثال: 50000',
-                        suffixText: 'ر.ي',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(labelText: 'المبلغ'),
                     ),
-                    const SizedBox(height: 14),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        isIncome ? 'نوع العملية: دخل' : 'نوع العملية: مصروف',
-                      ),
-                      secondary: Icon(
-                        isIncome
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
-                        color: isIncome ? Colors.green : Colors.red,
-                      ),
-                      value: isIncome,
-                      onChanged: (bool value) {
-                        setDialogState(() {
-                          isIncome = value;
-                          selectedIcon = value
-                              ? Icons.account_balance_wallet_rounded
-                              : Icons.shopping_bag_rounded;
-                        });
+                    TextField(
+                      controller: dateController,
+                      decoration:
+                          const InputDecoration(labelText: 'التاريخ الوصفي'),
+                    ),
+                    TextField(
+                      controller: labelController,
+                      decoration: const InputDecoration(labelText: 'الوسم'),
+                    ),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 2,
+                      decoration:
+                          const InputDecoration(labelText: 'الملاحظات'),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<TransactionType>(
+                      value: selectedType,
+                      decoration: const InputDecoration(labelText: 'نوع العملية'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: TransactionType.income,
+                          child: Text('دخل'),
+                        ),
+                        DropdownMenuItem(
+                          value: TransactionType.expense,
+                          child: Text('مصروف'),
+                        ),
+                      ],
+                      onChanged: (TransactionType? value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedType = value;
+                          });
+                        }
                       },
                     ),
                   ],
@@ -224,128 +1233,82 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('إلغاء'),
                 ),
-                ElevatedButton(
+                FilledButton(
                   onPressed: () {
-                    final String title = titleController.text.trim();
-                    final String enteredAmount = amountController.text
-                        .replaceAll(',', '')
-                        .replaceAll('٬', '')
-                        .trim();
+                    final double? amount =
+                        parseFlexibleDouble(amountController.text);
 
-                    final double? amount = double.tryParse(enteredAmount);
-
-                    if (title.isEmpty || amount == null || amount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'يرجى إدخال اسم العملية ومبلغ صحيح أكبر من صفر.',
-                          ),
-                        ),
+                    if (amount == null || !amount.isFinite || amount < 0.0) {
+                      showAppSnackBar(
+                        context,
+                        'أدخل مبلغًا صالحًا.',
+                        isError: true,
                       );
                       return;
                     }
 
-                    setState(() {
-                      _transactions.insert(
-                        0,
-                        TransactionData(
-                          title: title,
-                          category: isIncome ? 'دخل' : 'مصروفات',
-                          date: 'اليوم',
-                          amount: amount,
-                          isIncome: isIncome,
-                          icon: selectedIcon,
-                        ),
-                      );
-                    });
-
-                    Navigator.of(dialogContext).pop();
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تمت إضافة العملية بنجاح.'),
+                    widget.controller.updateTransaction(
+                      record.copyWith(
+                        title: titleController.text.trim(),
+                        category: categoryController.text.trim(),
+                        amount: amount,
+                        dateLabel: dateController.text.trim(),
+                        notes: notesController.text.trim(),
+                        label: labelController.text.trim(),
+                        type: selectedType,
                       ),
                     );
+
+                    widget.onChanged();
+                    Navigator.pop(dialogContext);
+                    showAppSnackBar(context, 'تم تعديل العملية بنجاح.');
                   },
-                  child: const Text('حفظ العملية'),
+                  child: const Text('حفظ'),
                 ),
               ],
             );
           },
         );
       },
-    );
-
-    titleController.dispose();
-    amountController.dispose();
+    ).whenComplete(() {
+      titleController.dispose();
+      categoryController.dispose();
+      amountController.dispose();
+      dateController.dispose();
+      notesController.dispose();
+      labelController.dispose();
+    });
   }
 
-  void _showAllTransactions() {
-    showModalBottomSheet<void>(
+  void _confirmDelete(TransactionRecord record) {
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.75,
-            minChildSize: 0.45,
-            maxChildSize: 0.95,
-            builder: (BuildContext context, ScrollController controller) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      width: 48,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'كل العمليات',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.separated(
-                        controller: controller,
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        itemCount: _transactions.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (BuildContext context, int index) {
-                          return TransactionTile(
-                            transaction: _transactions[index],
-                            formatAmount: _formatAmount,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('حذف العملية'),
+          content: Text('هل تريد حذف "${record.title}" نهائيًا؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.danger,
+              ),
+              onPressed: () {
+                widget.controller.deleteTransaction(record.id);
+                _selectedIds.remove(record.id);
+                widget.onChanged();
+                Navigator.pop(dialogContext);
+                showAppSnackBar(context, 'تم حذف العملية.');
+              },
+              child: const Text('حذف'),
+            ),
+          ],
         );
       },
     );
@@ -353,214 +1316,252 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF00695C);
-    const Color darkPrimaryColor = Color(0xFF004D40);
+    final List<TransactionRecord> transactions = widget.controller.transactions;
+    final bool allSelected =
+        transactions.isNotEmpty && _selectedIds.length == transactions.length;
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTransactionDialog,
-        backgroundColor: const Color(0xFFE6B800),
-        foregroundColor: Colors.black87,
-        elevation: 2,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'إضافة عملية',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 108),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _HeaderSection(),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [primaryColor, darkPrimaryColor],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: PageHeading(
+                    title: _selectionMode
+                        ? 'تم تحديد ${_selectedIds.length} عملية'
+                        : 'سجل العمليات',
+                    subtitle: _selectionMode
+                        ? 'اختر العمليات ثم صدّر التقرير النصي'
+                        : 'عمليات مفصلة مع تاريخ وملاحظات ووسوم',
+                    icon: Icons.receipt_long_rounded,
                   ),
-                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: -20,
-                      bottom: -28,
-                      child: Transform.rotate(
-                        angle: -0.25,
-                        child: const Icon(
-                          Icons.payments_rounded,
-                          size: 165,
-                          color: Color(0x22FFFFFF),
-                        ),
+                IconButton.filledTonal(
+                  tooltip: _selectionMode
+                      ? 'إلغاء وضع التحديد'
+                      : 'تفعيل وضع التحديد',
+                  onPressed: _toggleSelectionMode,
+                  icon: Icon(
+                    _selectionMode
+                        ? Icons.close_rounded
+                        : Icons.checklist_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_selectionMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: transactions.isEmpty ? null : _toggleAll,
+                      icon: Icon(
+                        allSelected
+                            ? Icons.deselect_rounded
+                            : Icons.select_all_rounded,
+                      ),
+                      label: Text(
+                        allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل',
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'الرصيد المتبقي',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Icon(
-                              Icons.account_balance_wallet_rounded,
-                              color: Colors.white,
-                              size: 26,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          '${_formatAmount(_balance)} ر.ي',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _amountInWords(),
-                          style: const TextStyle(
-                            color: Color(0xD9FFFFFF),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0x26FFFFFF),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.trending_up_rounded,
-                                color: Colors.white,
-                                size: 17,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                '+2.5% هذا الشهر',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: transactions.isEmpty ? null : _exportTextReport,
+                      icon: const Icon(Icons.file_download_rounded),
+                      label: const Text('تصدير TXT'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: transactions.isEmpty
+                ? const Center(
+                    child: EmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'لا توجد عمليات حالياً',
+                      subtitle: 'ستظهر هنا العمليات التي تضيفها أو توزّعها.',
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
+                    itemCount: transactions.length + 1,
+                    separatorBuilder: (BuildContext context, int index) {
+                      return const SizedBox(height: 10);
+                    },
+                    itemBuilder: (BuildContext context, int index) {
+                      if (index == transactions.length) {
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: BrandFooter(),
+                        );
+                      }
+
+                      final TransactionRecord item = transactions[index];
+
+                      return TransactionTile(
+                        record: item,
+                        useArabicNumerals: widget.useArabicNumerals,
+                        selectionMode: _selectionMode,
+                        isSelected: _selectedIds.contains(item.id),
+                        onSelected: (bool? selected) {
+                          setState(() {
+                            if (selected ?? false) {
+                              _selectedIds.add(item.id);
+                            } else {
+                              _selectedIds.remove(item.id);
+                            }
+                          });
+                        },
+                        onLongPress: () => _showTransactionActions(item),
+                        onTap: () {
+                          if (_selectionMode) {
+                            setState(() {
+                              if (_selectedIds.contains(item.id)) {
+                                _selectedIds.remove(item.id);
+                              } else {
+                                _selectedIds.add(item.id);
+                              }
+                            });
+                          } else {
+                            _showDetails(item);
+                          }
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TransactionTile extends StatelessWidget {
+  const TransactionTile({
+    super.key,
+    required this.record,
+    required this.useArabicNumerals,
+    required this.selectionMode,
+    required this.isSelected,
+    required this.onSelected,
+    required this.onLongPress,
+    required this.onTap,
+  });
+
+  final TransactionRecord record;
+  final bool useArabicNumerals;
+  final bool selectionMode;
+  final bool isSelected;
+  final ValueChanged<bool?> onSelected;
+  final VoidCallback onLongPress;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool income = record.type == TransactionType.income;
+    final Color color = income ? AppColors.income : AppColors.expense;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      color: isDark ? const Color(0xFF192523) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: isSelected ? AppColors.emerald : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (selectionMode)
+                Checkbox(
+                  value: isSelected,
+                  onChanged: onSelected,
+                ),
+              CircleAvatar(
+                backgroundColor: color.withOpacity(0.12),
+                foregroundColor: color,
+                child: Icon(
+                  income
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      record.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${record.category} • ${record.dateLabel}',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      record.notes,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Chip(
+                      padding: EdgeInsets.zero,
+                      label: Text(
+                        record.label,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: MetricCard(
-                      label: 'إجمالي الدخل',
-                      amount: _formatAmount(_totalIncome),
-                      color: Colors.green.shade700,
-                      icon: Icons.arrow_upward_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: MetricCard(
-                      label: 'إجمالي المصروفات',
-                      amount: _formatAmount(_totalExpenses),
-                      color: Colors.red.shade700,
-                      icon: Icons.arrow_downward_rounded,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              RevenueChart(
-                primaryColor: primaryColor,
-                formatAmount: _formatAmount,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'آخر العمليات',
+                  Text(
+                    '${income ? '+' : '-'}${formatYemeniAmount(record.amount, useArabicNumerals: useArabicNumerals)}',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: color,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  TextButton(
-                    onPressed: _showAllTransactions,
-                    child: const Text('عرض الكل'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'ريال يمني',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 6),
-              ..._transactions.take(4).map(
-                    (TransactionData transaction) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: TransactionTile(
-                        transaction: transaction,
-                        formatAmount: _formatAmount,
-                      ),
-                    ),
-                  ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _shareOnWhatsApp,
-                icon: const Icon(Icons.share_rounded),
-                label: const Text('مشاركة عبر واتساب'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 26),
-              Divider(color: Colors.grey.shade300),
-              const SizedBox(height: 12),
-              Text(
-                '© ${DateTime.now().year} جميع الحقوق محفوظة',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'صُنع بواسطة ABOALILUQMAN — أبو علي لقمان',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ],
           ),
@@ -570,42 +1571,571 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-class _HeaderSection extends StatelessWidget {
+class DebtLedgerTab extends StatelessWidget {
+  const DebtLedgerTab({
+    super.key,
+    required this.controller,
+    required this.useArabicNumerals,
+    required this.onChanged,
+  });
+
+  final FinancialController controller;
+  final bool useArabicNumerals;
+  final VoidCallback onChanged;
+
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'الموازنة والمحفظة',
-              style: TextStyle(
-                color: Color(0xFF00695C),
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
+        children: [
+          const PageHeading(
+            title: 'دفتر الديون',
+            subtitle: 'متابعة الذمم، العملاء، الموردين والتذكيرات الذكية',
+            icon: Icons.handshake_rounded,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: DebtSummaryCard(
+                  title: 'لك عند الآخرين',
+                  amount: controller.totalReceivables,
+                  color: AppColors.income,
+                  icon: Icons.call_received_rounded,
+                  useArabicNumerals: useArabicNumerals,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DebtSummaryCard(
+                  title: 'عليك للموردين',
+                  amount: controller.totalPayables,
+                  color: AppColors.expense,
+                  icon: Icons.call_made_rounded,
+                  useArabicNumerals: useArabicNumerals,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'الديون النشطة',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 10),
+          if (controller.debts.isEmpty)
+            const EmptyState(
+              icon: Icons.handshake_outlined,
+              title: 'لا توجد ديون نشطة',
+              subtitle: 'أضف الديون لاحقاً من نظامك المالي.',
+            )
+          else
+            ...controller.debts.map(
+              (DebtRecord debt) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: DebtCard(
+                  debt: debt,
+                  useArabicNumerals: useArabicNumerals,
+                ),
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              'لوحة التحكم المالية',
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 14,
+          const SizedBox(height: 12),
+          const BrandFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class DebtSummaryCard extends StatelessWidget {
+  const DebtSummaryCard({
+    super.key,
+    required this.title,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    required this.useArabicNumerals,
+  });
+
+  final String title;
+  final double amount;
+  final Color color;
+  final IconData icon;
+  final bool useArabicNumerals;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF192523) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            formatYemeniAmount(
+              amount,
+              useArabicNumerals: useArabicNumerals,
+            ),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+            ),
+          ),
+          const Text(
+            'ريال يمني',
+            style: TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class DebtCard extends StatelessWidget {
+  const DebtCard({
+    super.key,
+    required this.debt,
+    required this.useArabicNumerals,
+  });
+
+  final DebtRecord debt;
+  final bool useArabicNumerals;
+
+  Future<void> _sendDemand(BuildContext context) async {
+    final String normalizedPhone = normalizeYemeniPhone(debt.phone);
+
+    if (normalizedPhone == null) {
+      showAppSnackBar(
+        context,
+        'رقم هاتف الدين غير صالح. يجب أن يبدأ بالصيغة اليمنية 967.',
+        isError: true,
+      );
+      return;
+    }
+
+    final String message = '''
+مرحباً ${debt.name}،
+يرجى مراجعة الحساب المتبقي لديكم وهو ${formatYemeniAmount(debt.amount, useArabicNumerals: useArabicNumerals)} ريال يمني.
+${debt.note}
+صُنع بواسطة نظام أبو علي لقمان
+''';
+
+    final Uri whatsappUri = Uri.parse(
+      'https://wa.me/$normalizedPhone?text=${Uri.encodeComponent(message)}',
+    );
+
+    final bool opened = await launchUrl(
+      whatsappUri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (!opened) {
+      showAppSnackBar(
+        context,
+        'تعذر فتح WhatsApp. تأكد من تثبيت التطبيق وصحة الرقم.',
+        isError: true,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color typeColor =
+        debt.isReceivable ? AppColors.income : AppColors.expense;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      color: isDark ? const Color(0xFF192523) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: typeColor.withOpacity(0.12),
+                  foregroundColor: typeColor,
+                  child: Icon(
+                    debt.isReceivable
+                        ? Icons.person_outline_rounded
+                        : Icons.storefront_outlined,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        debt.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${debt.category} • ${debt.dueDateLabel}',
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  formatYemeniAmount(
+                    debt.amount,
+                    useArabicNumerals: useArabicNumerals,
+                  ),
+                  style: TextStyle(
+                    color: typeColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                debt.note,
+                style: const TextStyle(color: AppColors.muted),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _sendDemand(context),
+                icon: const Icon(Icons.chat_rounded),
+                label: const Text('مطالبة ذكية عبر واتساب'),
               ),
             ),
           ],
         ),
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: Color(0xFF00695C),
-          child: Text(
-            'MA',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class ProfileTab extends StatefulWidget {
+  const ProfileTab({
+    super.key,
+    required this.profile,
+    required this.themeMode,
+    required this.fontHierarchy,
+    required this.useArabicNumerals,
+    required this.onThemeModeChanged,
+    required this.onFontHierarchyChanged,
+    required this.onArabicNumeralsChanged,
+    required this.onProfileChanged,
+  });
+
+  final UserProfile profile;
+  final ThemeMode themeMode;
+  final FontHierarchy fontHierarchy;
+  final bool useArabicNumerals;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
+  final ValueChanged<FontHierarchy> onFontHierarchyChanged;
+  final ValueChanged<bool> onArabicNumeralsChanged;
+  final VoidCallback onProfileChanged;
+
+  @override
+  State<ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<ProfileTab> {
+  void _editProfile() {
+    final TextEditingController nameController =
+        TextEditingController(text: widget.profile.fullName);
+    final TextEditingController initialsController =
+        TextEditingController(text: widget.profile.avatarLetters);
+    final TextEditingController phoneController =
+        TextEditingController(text: widget.profile.phone);
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('تعديل الملف الشخصي'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'الاسم الكامل'),
+                ),
+                TextField(
+                  controller: initialsController,
+                  maxLength: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'حروف الصورة الشخصية',
+                  ),
+                ),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'رقم الهاتف بصيغة +967 أو 967',
+                  ),
+                ),
+              ],
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final String name = nameController.text.trim();
+                final String letters = initialsController.text.trim();
+                final String phone = phoneController.text.trim();
+
+                if (name.isEmpty || letters.isEmpty || phone.isEmpty) {
+                  showAppSnackBar(
+                    context,
+                    'أكمل الاسم والحروف ورقم الهاتف.',
+                    isError: true,
+                  );
+                  return;
+                }
+
+                setState(() {
+                  widget.profile.fullName = name;
+                  widget.profile.avatarLetters = letters.toUpperCase();
+                  widget.profile.phone = phone;
+                });
+
+                widget.onProfileChanged();
+                Navigator.pop(dialogContext);
+                showAppSnackBar(context, 'تم تحديث الملف الشخصي.');
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      nameController.dispose();
+      initialsController.dispose();
+      phoneController.dispose();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
+        children: [
+          const PageHeading(
+            title: 'الملف والإعدادات',
+            subtitle: 'هوية المستخدم والتحكم بالشكل واللغة الرقمية',
+            icon: Icons.person_rounded,
+          ),
+          const SizedBox(height: 20),
+          Card(
+            elevation: 0,
+            color: isDark ? const Color(0xFF192523) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(16),
+              leading: CircleAvatar(
+                radius: 27,
+                backgroundColor: AppColors.emerald,
+                foregroundColor: Colors.white,
+                child: Text(
+                  widget.profile.avatarLetters,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              title: Text(
+                widget.profile.fullName,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: Text(widget.profile.phone),
+              trailing: IconButton(
+                tooltip: 'تعديل الملف',
+                icon: const Icon(Icons.edit_rounded),
+                onPressed: _editProfile,
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'التحكم بالمظهر',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            elevation: 0,
+            color: isDark ? const Color(0xFF192523) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.dark_mode_rounded),
+                  title: const Text('الوضع الداكن'),
+                  subtitle: const Text('تفعيل واجهة داكنة مريحة للعين'),
+                  value: widget.themeMode == ThemeMode.dark,
+                  onChanged: (bool value) {
+                    widget.onThemeModeChanged(
+                      value ? ThemeMode.dark : ThemeMode.light,
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.text_fields_rounded),
+                  title: const Text('هرمية الخط'),
+                  subtitle: Text(fontHierarchyLabel(widget.fontHierarchy)),
+                  trailing: DropdownButton<FontHierarchy>(
+                    value: widget.fontHierarchy,
+                    underline: const SizedBox.shrink(),
+                    items: const [
+                      DropdownMenuItem(
+                        value: FontHierarchy.system,
+                        child: Text('النظام'),
+                      ),
+                      DropdownMenuItem(
+                        value: FontHierarchy.serif,
+                        child: Text('Serif'),
+                      ),
+                      DropdownMenuItem(
+                        value: FontHierarchy.monospace,
+                        child: Text('Monospace'),
+                      ),
+                    ],
+                    onChanged: (FontHierarchy? value) {
+                      if (value != null) {
+                        widget.onFontHierarchyChanged(value);
+                      }
+                    },
+                  ),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(Icons.numbers_rounded),
+                  title: const Text('الأرقام العربية'),
+                  subtitle: const Text('عرض المبالغ بالأرقام ١٢٣ بدلاً من 123'),
+                  value: widget.useArabicNumerals,
+                  onChanged: widget.onArabicNumeralsChanged,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 26),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.gold.withOpacity(0.32),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.workspace_premium_rounded, color: Color(0xFF9A7000)),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'هوية محاسبي محفوظة ضمن واجهة التطبيق ولا يمكن إزالة تذييل الملكية الفكرية.',
+                    style: TextStyle(height: 1.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          const BrandFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class PageHeading extends StatelessWidget {
+  const PageHeading({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.emerald.withOpacity(0.12),
+          foregroundColor: AppColors.emerald,
+          child: Icon(icon),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -613,52 +2143,86 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-class MetricCard extends StatelessWidget {
-  const MetricCard({
+class BrandFooter extends StatelessWidget {
+  const BrandFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 14),
+      child: Text(
+        '© 2026 جميع الحقوق محفوظة | صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.muted,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState({
     super.key,
-    required this.label,
-    required this.amount,
-    required this.color,
     required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: AppColors.muted),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailLine extends StatelessWidget {
+  const _DetailLine({
+    required this.label,
+    required this.value,
   });
 
   final String label;
-  final String amount;
-  final Color color;
-  final IconData icon;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: RichText(
+        text: TextSpan(
+          style: DefaultTextStyle.of(context).style,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color.withOpacity(0.12),
-              child: Icon(icon, color: color, size: 20),
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              '$amount ر.ي',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            TextSpan(text: value),
           ],
         ),
       ),
@@ -666,189 +2230,100 @@ class MetricCard extends StatelessWidget {
   }
 }
 
-class RevenueChart extends StatelessWidget {
-  const RevenueChart({
-    super.key,
-    required this.primaryColor,
-    required this.formatAmount,
-  });
+String formatYemeniAmount(
+  double amount, {
+  bool useArabicNumerals = false,
+}) {
+  final bool isNegative = amount.isNegative;
+  final String raw = amount.abs().toStringAsFixed(0);
+  final StringBuffer formatted = StringBuffer();
 
-  final Color primaryColor;
-  final String Function(num) formatAmount;
+  for (int index = 0; index < raw.length; index++) {
+    final int remaining = raw.length - index;
+    formatted.write(raw[index]);
 
-  @override
-  Widget build(BuildContext context) {
-    const List<double> values = [120, 150, 110, 180, 210, 190];
-    const List<String> months = [
-      'يناير',
-      'فبراير',
-      'مارس',
-      'أبريل',
-      'مايو',
-      'يونيو',
-    ];
+    if (remaining > 1 && remaining % 3 == 1) {
+      formatted.write(',');
+    }
+  }
 
-    const double maximumValue = 220;
+  final String result = isNegative ? '-$formatted' : formatted.toString();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'الإيرادات vs المصروفات',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Chip(
-                  avatar: Icon(Icons.check_rounded, size: 16),
-                  label: Text('آخر 6 أشهر'),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 180,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List<Widget>.generate(values.length, (int index) {
-                  final double barHeight = (values[index] / maximumValue) * 125;
+  return useArabicNumerals ? toArabicNumerals(result) : result;
+}
 
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${values[index].toInt()}K',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Container(
-                            height: barHeight,
-                            decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(7),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            months[index],
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'تمثيل مبسط للإيرادات الشهرية بالآلاف.',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+String toArabicNumerals(String value) {
+  const Map<String, String> digits = <String, String>{
+    '0': '٠',
+    '1': '١',
+    '2': '٢',
+    '3': '٣',
+    '4': '٤',
+    '5': '٥',
+    '6': '٦',
+    '7': '٧',
+    '8': '٨',
+    '9': '٩',
+  };
+
+  return value.split('').map((String char) => digits[char] ?? char).join();
+}
+
+double? parseFlexibleDouble(String value) {
+  final String normalized = value
+      .trim()
+      .replaceAll(',', '')
+      .replaceAll('٬', '')
+      .replaceAll('٫', '.');
+
+  if (normalized.isEmpty) {
+    return null;
+  }
+
+  return double.tryParse(normalized);
+}
+
+String? normalizeYemeniPhone(String value) {
+  String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+  if (cleaned.startsWith('00')) {
+    cleaned = cleaned.substring(2);
+  }
+
+  if (cleaned.startsWith('0')) {
+    cleaned = '967${cleaned.substring(1)}';
+  }
+
+  if (!cleaned.startsWith('967') || cleaned.length < 11) {
+    return null;
+  }
+
+  return cleaned;
+}
+
+String fontHierarchyLabel(FontHierarchy hierarchy) {
+  switch (hierarchy) {
+    case FontHierarchy.system:
+      return 'خط النظام الافتراضي';
+    case FontHierarchy.serif:
+      return 'خط Serif مريح للقراءة';
+    case FontHierarchy.monospace:
+      return 'خط Monospace متساوي العرض';
   }
 }
 
-class TransactionTile extends StatelessWidget {
-  const TransactionTile({
-    super.key,
-    required this.transaction,
-    required this.formatAmount,
-  });
-
-  final TransactionData transaction;
-  final String Function(num) formatAmount;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color amountColor =
-        transaction.isIncome ? Colors.green.shade700 : Colors.red.shade700;
-
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 6,
-        ),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE6F2F0),
-          child: Icon(
-            transaction.icon,
-            color: const Color(0xFF00695C),
-          ),
-        ),
-        title: Text(
-          transaction.title,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text('${transaction.category} • ${transaction.date}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '${transaction.isIncome ? '+' : '-'}${formatAmount(transaction.amount)}',
-              textDirection: TextDirection.ltr,
-              style: TextStyle(
-                color: amountColor,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'ر.ي',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
+void showAppSnackBar(
+  BuildContext context,
+  String message, {
+  bool isError = false,
+}) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? AppColors.danger : AppColors.emerald,
+        content: Text(message),
       ),
     );
-  }
-}
-
-class TransactionData {
-  const TransactionData({
-    required this.title,
-    required this.category,
-    required this.date,
-    required this.amount,
-    required this.isIncome,
-    required this.icon,
-  });
-
-  final String title;
-  final String category;
-  final String date;
-  final double amount;
-  final bool isIncome;
-  final IconData icon;
 }
