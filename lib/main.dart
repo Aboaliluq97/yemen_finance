@@ -18,63 +18,14 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
   bool _useArabicNumerals = false;
   FontHierarchy _fontHierarchy = FontHierarchy.system;
 
-  void _updateThemeMode(ThemeMode value) {
-    setState(() {
-      _themeMode = value;
-    });
-  }
-
-  void _updateArabicNumerals(bool value) {
-    setState(() {
-      _useArabicNumerals = value;
-    });
-  }
-
-  void _updateFontHierarchy(FontHierarchy value) {
-    setState(() {
-      _fontHierarchy = value;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = _buildTextTheme(_fontHierarchy);
-
     return MaterialApp(
       title: 'محاسبي',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.emerald,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF4F8F6),
-        textTheme: textTheme,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-          foregroundColor: AppColors.ink,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.emeraldLight,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF101716),
-        textTheme: textTheme,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-        ),
-      ),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       builder: (BuildContext context, Widget? child) {
         return Directionality(
           textDirection: TextDirection.rtl,
@@ -82,33 +33,89 @@ class _MuhasibiAppState extends State<MuhasibiApp> {
         );
       },
       home: MuhasibiHome(
-        useArabicNumerals: _useArabicNumerals,
         themeMode: _themeMode,
         fontHierarchy: _fontHierarchy,
-        onThemeModeChanged: _updateThemeMode,
-        onArabicNumeralsChanged: _updateArabicNumerals,
-        onFontHierarchyChanged: _updateFontHierarchy,
+        useArabicNumerals: _useArabicNumerals,
+        onThemeModeChanged: (ThemeMode value) {
+          setState(() {
+            _themeMode = value;
+          });
+        },
+        onFontHierarchyChanged: (FontHierarchy value) {
+          setState(() {
+            _fontHierarchy = value;
+          });
+        },
+        onArabicNumeralsChanged: (bool value) {
+          setState(() {
+            _useArabicNumerals = value;
+          });
+        },
       ),
     );
   }
 
-  TextTheme _buildTextTheme(FontHierarchy hierarchy) {
-    final String? fontFamily;
+  ThemeData _buildTheme(Brightness brightness) {
+    final bool isDark = brightness == Brightness.dark;
 
-    switch (hierarchy) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.emerald,
+        brightness: brightness,
+      ),
+      scaffoldBackgroundColor:
+          isDark ? const Color(0xFF101716) : const Color(0xFFF4F8F6),
+      textTheme: _buildTextTheme(),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: isDark ? Colors.white : AppColors.ink,
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: isDark ? const Color(0xFF192523) : Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white24 : Colors.black12,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white24 : Colors.black12,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: AppColors.emerald,
+            width: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextTheme _buildTextTheme() {
+    String? family;
+
+    switch (_fontHierarchy) {
       case FontHierarchy.system:
-        fontFamily = null;
+        family = null;
       case FontHierarchy.serif:
-        fontFamily = 'serif';
+        family = 'serif';
       case FontHierarchy.monospace:
-        fontFamily = 'monospace';
+        family = 'monospace';
     }
 
     return Typography.material2021().black.apply(
-      fontFamily: fontFamily,
-      bodyColor: AppColors.ink,
-      displayColor: AppColors.ink,
-    );
+          fontFamily: family,
+          bodyColor: AppColors.ink,
+          displayColor: AppColors.ink,
+        );
   }
 }
 
@@ -128,26 +135,25 @@ class AppColors {
   static const Color danger = Color(0xFFC62828);
   static const Color income = Color(0xFF15803D);
   static const Color expense = Color(0xFFB91C1C);
-  static const Color card = Colors.white;
 }
 
 class MuhasibiHome extends StatefulWidget {
   const MuhasibiHome({
     super.key,
-    required this.useArabicNumerals,
     required this.themeMode,
     required this.fontHierarchy,
+    required this.useArabicNumerals,
     required this.onThemeModeChanged,
-    required this.onArabicNumeralsChanged,
     required this.onFontHierarchyChanged,
+    required this.onArabicNumeralsChanged,
   });
 
-  final bool useArabicNumerals;
   final ThemeMode themeMode;
   final FontHierarchy fontHierarchy;
+  final bool useArabicNumerals;
   final ValueChanged<ThemeMode> onThemeModeChanged;
-  final ValueChanged<bool> onArabicNumeralsChanged;
   final ValueChanged<FontHierarchy> onFontHierarchyChanged;
+  final ValueChanged<bool> onArabicNumeralsChanged;
 
   @override
   State<MuhasibiHome> createState() => _MuhasibiHomeState();
@@ -164,9 +170,15 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
     phone: '967777123456',
   );
 
+  void _refresh() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
+    final List<Widget> pages = <Widget>[
       WalletDashboardTab(
         controller: _controller,
         useArabicNumerals: widget.useArabicNumerals,
@@ -180,7 +192,6 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
       DebtLedgerTab(
         controller: _controller,
         useArabicNumerals: widget.useArabicNumerals,
-        onChanged: _refresh,
       ),
       ProfileTab(
         profile: _profile,
@@ -208,7 +219,7 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
             _currentIndex = index;
           });
         },
-        destinations: const [
+        destinations: const <NavigationDestination>[
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet_rounded),
@@ -233,12 +244,6 @@ class _MuhasibiHomeState extends State<MuhasibiHome> {
       ),
     );
   }
-
-  void _refresh() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
 }
 
 class FinancialController {
@@ -252,7 +257,7 @@ class FinancialController {
 
   factory FinancialController.demo() {
     return FinancialController(
-      wallets: [
+      wallets: <WalletFolder>[
         WalletFolder(
           id: 'daily',
           title: 'المصروفات اليومية',
@@ -278,7 +283,7 @@ class FinancialController {
           color: const Color(0xFF0F766E),
         ),
       ],
-      transactions: [
+      transactions: <TransactionRecord>[
         TransactionRecord(
           id: 't1',
           title: 'راتب شهر يونيو',
@@ -313,7 +318,7 @@ class FinancialController {
           createdAt: DateTime(2026, 6, 21),
         ),
       ],
-      debts: [
+      debts: <DebtRecord>[
         DebtRecord(
           id: 'd1',
           name: 'أحمد محمد',
@@ -358,7 +363,9 @@ class FinancialController {
 
   double get totalIncome {
     return _transactions
-        .where((TransactionRecord item) => item.type == TransactionType.income)
+        .where(
+          (TransactionRecord item) => item.type == TransactionType.income,
+        )
         .fold<double>(
           0.0,
           (double sum, TransactionRecord item) => sum + item.amount,
@@ -367,7 +374,9 @@ class FinancialController {
 
   double get totalExpenses {
     return _transactions
-        .where((TransactionRecord item) => item.type == TransactionType.expense)
+        .where(
+          (TransactionRecord item) => item.type == TransactionType.expense,
+        )
         .fold<double>(
           0.0,
           (double sum, TransactionRecord item) => sum + item.amount,
@@ -400,9 +409,8 @@ class FinancialController {
     required String dateLabel,
     required String notes,
   }) {
-    final double cleanAmount = salaryAmount.isFinite && salaryAmount > 0.0
-        ? salaryAmount
-        : 0.0;
+    final double cleanAmount =
+        salaryAmount.isFinite && salaryAmount > 0.0 ? salaryAmount : 0.0;
 
     final double jamiyaAmount =
         cleanAmount >= 20000.0 ? 20000.0 : cleanAmount;
@@ -424,9 +432,8 @@ class FinancialController {
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         title: title.trim().isEmpty ? 'راتب وارد' : title.trim(),
         category: 'دخل',
-        dateLabel: dateLabel.trim().isEmpty
-            ? 'تاريخ مُدخل يدوياً'
-            : dateLabel.trim(),
+        dateLabel:
+            dateLabel.trim().isEmpty ? 'تاريخ مُدخل يدوياً' : dateLabel.trim(),
         notes: notes.trim().isEmpty
             ? 'تم التوزيع التلقائي بين المحافظ.'
             : notes.trim(),
@@ -446,7 +453,9 @@ class FinancialController {
   }
 
   void deleteTransaction(String id) {
-    _transactions.removeWhere((TransactionRecord item) => item.id == id);
+    _transactions.removeWhere(
+      (TransactionRecord item) => item.id == id,
+    );
   }
 
   void updateTransaction(TransactionRecord updatedRecord) {
@@ -467,8 +476,8 @@ class FinancialController {
 
   String buildTransactionReport(Iterable<TransactionRecord> records) {
     final List<TransactionRecord> data = records.toList();
-
     final StringBuffer report = StringBuffer();
+
     report.writeln('تقرير محاسبي المالي');
     report.writeln('صُنع بواسطة نظام أبو علي لقمان — ABOALILUQMAN');
     report.writeln('عدد السجلات: ${data.length}');
@@ -564,22 +573,22 @@ class TransactionRecord {
 class DebtRecord {
   DebtRecord({
     required this.id,
-    required this.name,
-    required this.phone,
-    required this.category,
+    this.name,
+    this.phone,
+    this.category,
     required this.amount,
-    required this.note,
-    required this.dueDateLabel,
+    this.note,
+    this.dueDateLabel,
     required this.isReceivable,
   });
 
   final String id;
-  final String name;
-  final String phone;
-  final String category;
+  final String? name;
+  final String? phone;
+  final String? category;
   final double amount;
-  final String note;
-  final String dueDateLabel;
+  final String? note;
+  final String? dueDateLabel;
   final bool isReceivable;
 }
 
@@ -626,7 +635,7 @@ class WalletDashboardTab extends StatelessWidget {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
-        children: [
+        children: <Widget>[
           const PageHeading(
             title: 'الموازنة والمحفظة',
             subtitle: 'ملخص مالي ذكي وتنظيم تلقائي للأموال',
@@ -660,7 +669,6 @@ class WalletDashboardTab extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
           const BrandFooter(),
         ],
       ),
@@ -683,12 +691,15 @@ class _NetBalanceCard extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.emerald, AppColors.emeraldDark],
+          colors: <Color>[
+            AppColors.emerald,
+            AppColors.emeraldDark,
+          ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
+        boxShadow: <BoxShadow>[
           BoxShadow(
             color: AppColors.emerald.withOpacity(0.24),
             blurRadius: 24,
@@ -698,10 +709,13 @@ class _NetBalanceCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           const Row(
-            children: [
-              Icon(Icons.auto_graph_rounded, color: Color(0xFFFFE9A5)),
+            children: <Widget>[
+              Icon(
+                Icons.auto_graph_rounded,
+                color: Color(0xFFFFE9A5),
+              ),
               SizedBox(width: 8),
               Text(
                 'صافي الرصيد التراكمي',
@@ -814,9 +828,9 @@ class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: <Widget>[
             const Row(
-              children: [
+              children: <Widget>[
                 CircleAvatar(
                   backgroundColor: Color(0xFFE0F2EE),
                   foregroundColor: AppColors.emerald,
@@ -837,17 +851,20 @@ class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
             const SizedBox(height: 10),
             const Text(
               'يُحوّل أول 20,000 ريال إلى الجمعية، ثم 50,000 ريال إلى المصروفات اليومية، وما تبقى إلى الادخار الاستراتيجي.',
-              style: TextStyle(color: AppColors.muted, height: 1.5),
+              style: TextStyle(
+                color: AppColors.muted,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _salaryController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'مبلغ الراتب الوارد',
                 suffixText: 'ريال يمني',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -855,7 +872,6 @@ class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
               controller: _titleController,
               decoration: const InputDecoration(
                 labelText: 'عنوان العملية',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -864,7 +880,6 @@ class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
               decoration: const InputDecoration(
                 labelText: 'التاريخ الوصفي (ميلادي أو هجري)',
                 hintText: 'مثال: 24 يونيو 2026 م | 8 محرم 1448 هـ',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -873,7 +888,6 @@ class _SalaryAllocationCardState extends State<_SalaryAllocationCard> {
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'ملاحظات',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -931,7 +945,7 @@ class WalletFolderCard extends StatelessWidget {
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
+          children: <Widget>[
             Text(
               formatYemeniAmount(
                 wallet.balance,
@@ -945,7 +959,10 @@ class WalletFolderCard extends StatelessWidget {
             ),
             const Text(
               'ريال يمني',
-              style: TextStyle(fontSize: 11, color: AppColors.muted),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.muted,
+              ),
             ),
           ],
         ),
@@ -976,13 +993,16 @@ class _TransactionsTabState extends State<TransactionsTab> {
 
   List<TransactionRecord> get _selectedTransactions {
     return widget.controller.transactions
-        .where((TransactionRecord item) => _selectedIds.contains(item.id))
+        .where(
+          (TransactionRecord item) => _selectedIds.contains(item.id),
+        )
         .toList();
   }
 
   void _toggleSelectionMode() {
     setState(() {
       _selectionMode = !_selectionMode;
+
       if (!_selectionMode) {
         _selectedIds.clear();
       }
@@ -998,7 +1018,9 @@ class _TransactionsTabState extends State<TransactionsTab> {
       } else {
         _selectedIds
           ..clear()
-          ..addAll(all.map((TransactionRecord item) => item.id));
+          ..addAll(
+            all.map((TransactionRecord item) => item.id),
+          );
       }
     });
   }
@@ -1015,7 +1037,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
 
     showAppSnackBar(
       context,
-      'تم تجهيز تقرير TXT شامل ونظيف لـ ${records.length} عملية. هذه النسخة المستقلة تُنشئ النص وتبلّغك بالنجاح؛ حفظ ملف فعلي يتطلب إضافة صلاحيات/مكتبة تخزين غير مسموحة ضمن قيودك الحالية.',
+      'تم تجهيز تقرير TXT شامل لـ ${records.length} عملية. تم إنشاء النص بنجاح داخل سجل التطبيق.',
     );
   }
 
@@ -1028,7 +1050,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             child: Wrap(
-              children: [
+              children: <Widget>[
                 ListTile(
                   leading: const Icon(Icons.visibility_rounded),
                   title: const Text('عرض التفاصيل'),
@@ -1060,7 +1082,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
                     Navigator.pop(sheetContext);
                     showAppSnackBar(
                       context,
-                      'تم تجهيز سجل العملية للطباعة. الطباعة الفعلية تحتاج حزمة طباعة إضافية غير مشمولة في هذا الملف.',
+                      'تم تجهيز العملية للطباعة. الطباعة الأصلية تحتاج حزمة مخصصة.',
                     );
                   },
                 ),
@@ -1096,20 +1118,32 @@ class _TransactionsTabState extends State<TransactionsTab> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _DetailLine(label: 'التصنيف', value: record.category),
+              children: <Widget>[
+                _DetailLine(
+                  label: 'التصنيف',
+                  value: record.category,
+                ),
                 _DetailLine(
                   label: 'المبلغ',
                   value:
                       '${formatYemeniAmount(record.amount, useArabicNumerals: widget.useArabicNumerals)} ريال يمني',
                 ),
-                _DetailLine(label: 'التاريخ', value: record.dateLabel),
-                _DetailLine(label: 'الوسم', value: record.label),
-                _DetailLine(label: 'الملاحظات', value: record.notes),
+                _DetailLine(
+                  label: 'التاريخ',
+                  value: record.dateLabel,
+                ),
+                _DetailLine(
+                  label: 'الوسم',
+                  value: record.label,
+                ),
+                _DetailLine(
+                  label: 'الملاحظات',
+                  value: record.notes,
+                ),
               ],
             ),
           ),
-          actions: [
+          actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('إغلاق'),
@@ -1137,7 +1171,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
         return AlertDialog(
           title: const Text('نص المشاركة'),
           content: SelectableText(message),
-          actions: [
+          actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('إغلاق'),
@@ -1174,48 +1208,59 @@ class _TransactionsTabState extends State<TransactionsTab> {
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
+                  children: <Widget>[
                     TextField(
                       controller: titleController,
-                      decoration: const InputDecoration(labelText: 'العنوان'),
+                      decoration: const InputDecoration(
+                        labelText: 'العنوان',
+                      ),
                     ),
                     TextField(
                       controller: categoryController,
-                      decoration:
-                          const InputDecoration(labelText: 'التصنيف'),
+                      decoration: const InputDecoration(
+                        labelText: 'التصنيف',
+                      ),
                     ),
                     TextField(
                       controller: amountController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(labelText: 'المبلغ'),
+                      decoration: const InputDecoration(
+                        labelText: 'المبلغ',
+                      ),
                     ),
                     TextField(
                       controller: dateController,
-                      decoration:
-                          const InputDecoration(labelText: 'التاريخ الوصفي'),
+                      decoration: const InputDecoration(
+                        labelText: 'التاريخ الوصفي',
+                      ),
                     ),
                     TextField(
                       controller: labelController,
-                      decoration: const InputDecoration(labelText: 'الوسم'),
+                      decoration: const InputDecoration(
+                        labelText: 'الوسم',
+                      ),
                     ),
                     TextField(
                       controller: notesController,
                       maxLines: 2,
-                      decoration:
-                          const InputDecoration(labelText: 'الملاحظات'),
+                      decoration: const InputDecoration(
+                        labelText: 'الملاحظات',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<TransactionType>(
                       value: selectedType,
-                      decoration: const InputDecoration(labelText: 'نوع العملية'),
-                      items: const [
-                        DropdownMenuItem(
+                      decoration: const InputDecoration(
+                        labelText: 'نوع العملية',
+                      ),
+                      items: const <DropdownMenuItem<TransactionType>>[
+                        DropdownMenuItem<TransactionType>(
                           value: TransactionType.income,
                           child: Text('دخل'),
                         ),
-                        DropdownMenuItem(
+                        DropdownMenuItem<TransactionType>(
                           value: TransactionType.expense,
                           child: Text('مصروف'),
                         ),
@@ -1231,7 +1276,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
                   ],
                 ),
               ),
-              actions: [
+              actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('إلغاء'),
@@ -1264,7 +1309,11 @@ class _TransactionsTabState extends State<TransactionsTab> {
 
                     widget.onChanged();
                     Navigator.pop(dialogContext);
-                    showAppSnackBar(context, 'تم تعديل العملية بنجاح.');
+
+                    showAppSnackBar(
+                      context,
+                      'تم تعديل العملية بنجاح.',
+                    );
                   },
                   child: const Text('حفظ'),
                 ),
@@ -1290,7 +1339,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
         return AlertDialog(
           title: const Text('حذف العملية'),
           content: Text('هل تريد حذف "${record.title}" نهائيًا؟'),
-          actions: [
+          actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('إلغاء'),
@@ -1304,7 +1353,11 @@ class _TransactionsTabState extends State<TransactionsTab> {
                 _selectedIds.remove(record.id);
                 widget.onChanged();
                 Navigator.pop(dialogContext);
-                showAppSnackBar(context, 'تم حذف العملية.');
+
+                showAppSnackBar(
+                  context,
+                  'تم حذف العملية.',
+                );
               },
               child: const Text('حذف'),
             ),
@@ -1317,16 +1370,17 @@ class _TransactionsTabState extends State<TransactionsTab> {
   @override
   Widget build(BuildContext context) {
     final List<TransactionRecord> transactions = widget.controller.transactions;
+
     final bool allSelected =
         transactions.isNotEmpty && _selectedIds.length == transactions.length;
 
     return SafeArea(
       child: Column(
-        children: [
+        children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
             child: Row(
-              children: [
+              children: <Widget>[
                 Expanded(
                   child: PageHeading(
                     title: _selectionMode
@@ -1354,9 +1408,12 @@ class _TransactionsTabState extends State<TransactionsTab> {
           ),
           if (_selectionMode)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 4,
+              ),
               child: Row(
-                children: [
+                children: <Widget>[
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: transactions.isEmpty ? null : _toggleAll,
@@ -1373,7 +1430,8 @@ class _TransactionsTabState extends State<TransactionsTab> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: transactions.isEmpty ? null : _exportTextReport,
+                      onPressed:
+                          transactions.isEmpty ? null : _exportTextReport,
                       icon: const Icon(Icons.file_download_rounded),
                       label: const Text('تصدير TXT'),
                     ),
@@ -1488,7 +1546,7 @@ class TransactionTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               if (selectionMode)
                 Checkbox(
                   value: isSelected,
@@ -1507,7 +1565,7 @@ class TransactionTile extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: <Widget>[
                     Text(
                       record.title,
                       style: const TextStyle(
@@ -1545,7 +1603,7 @@ class TransactionTile extends StatelessWidget {
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
+                children: <Widget>[
                   Text(
                     '${income ? '+' : '-'}${formatYemeniAmount(record.amount, useArabicNumerals: useArabicNumerals)}',
                     style: TextStyle(
@@ -1576,19 +1634,17 @@ class DebtLedgerTab extends StatelessWidget {
     super.key,
     required this.controller,
     required this.useArabicNumerals,
-    required this.onChanged,
   });
 
   final FinancialController controller;
   final bool useArabicNumerals;
-  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
-        children: [
+        children: <Widget>[
           const PageHeading(
             title: 'دفتر الديون',
             subtitle: 'متابعة الذمم، العملاء، الموردين والتذكيرات الذكية',
@@ -1596,7 +1652,7 @@ class DebtLedgerTab extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Row(
-            children: [
+            children: <Widget>[
               Expanded(
                 child: DebtSummaryCard(
                   title: 'لك عند الآخرين',
@@ -1642,7 +1698,6 @@ class DebtLedgerTab extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 12),
           const BrandFooter(),
         ],
       ),
@@ -1675,16 +1730,21 @@ class DebtSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF192523) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.22)),
+        border: Border.all(
+          color: color.withOpacity(0.22),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Icon(icon, color: color),
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.muted,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1700,7 +1760,10 @@ class DebtSummaryCard extends StatelessWidget {
           ),
           const Text(
             'ريال يمني',
-            style: TextStyle(fontSize: 11, color: AppColors.muted),
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.muted,
+            ),
           ),
         ],
       ),
@@ -1719,22 +1782,31 @@ class DebtCard extends StatelessWidget {
   final bool useArabicNumerals;
 
   Future<void> _sendDemand(BuildContext context) async {
-    final String normalizedPhone = normalizeYemeniPhone(debt.phone);
+    final String? normalizedPhone = normalizeYemeniPhone(debt.phone ?? '');
 
     if (normalizedPhone == null) {
       showAppSnackBar(
         context,
-        'رقم هاتف الدين غير صالح. يجب أن يبدأ بالصيغة اليمنية 967.',
+        'رقم هاتف الدين غير صالح. أدخل رقمًا يمنيًا صحيحًا يبدأ بـ 967.',
         isError: true,
       );
       return;
     }
 
+    final String customerName = (debt.name ?? '').trim().isEmpty
+        ? 'العميل'
+        : debt.name!.trim();
+
+    final String debtNote = debt.note ?? '';
+
     final String message = '''
-مرحباً ${debt.name}،
-يرجى مراجعة الحساب المتبقي لديكم وهو ${formatYemeniAmount(debt.amount, useArabicNumerals: useArabicNumerals)} ريال يمني.
-${debt.note}
-صُنع بواسطة نظام أبو علي لقمان
+مرحباً $customerName،
+يرجى مراجعة الحساب المتبقي لديكم وهو ${formatYemeniAmount(
+  debt.amount,
+  useArabicNumerals: useArabicNumerals,
+)} ريال يمني.
+$debtNote
+صُنع بواسطة نظام أبو علي لقمان — ABOALILUQMAN
 ''';
 
     final Uri whatsappUri = Uri.parse(
@@ -1763,7 +1835,22 @@ ${debt.note}
   Widget build(BuildContext context) {
     final Color typeColor =
         debt.isReceivable ? AppColors.income : AppColors.expense;
+
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final String displayName = (debt.name ?? '').trim().isEmpty
+        ? 'بدون اسم'
+        : debt.name!.trim();
+
+    final String displayCategory = (debt.category ?? '').trim().isEmpty
+        ? 'دين'
+        : debt.category!.trim();
+
+    final String displayDueDate = (debt.dueDateLabel ?? '').trim().isEmpty
+        ? 'لا يوجد تاريخ استحقاق'
+        : debt.dueDateLabel!.trim();
+
+    final String displayNote = debt.note ?? '';
 
     return Card(
       elevation: 0,
@@ -1774,9 +1861,9 @@ ${debt.note}
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          children: [
+          children: <Widget>[
             Row(
-              children: [
+              children: <Widget>[
                 CircleAvatar(
                   backgroundColor: typeColor.withOpacity(0.12),
                   foregroundColor: typeColor,
@@ -1790,9 +1877,9 @@ ${debt.note}
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    children: <Widget>[
                       Text(
-                        debt.name,
+                        displayName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
@@ -1800,7 +1887,7 @@ ${debt.note}
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${debt.category} • ${debt.dueDateLabel}',
+                        '$displayCategory • $displayDueDate',
                         style: const TextStyle(
                           color: AppColors.muted,
                           fontSize: 12,
@@ -1822,14 +1909,18 @@ ${debt.note}
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                debt.note,
-                style: const TextStyle(color: AppColors.muted),
+            if (displayNote.trim().isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  displayNote,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                  ),
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -1876,8 +1967,10 @@ class _ProfileTabState extends State<ProfileTab> {
   void _editProfile() {
     final TextEditingController nameController =
         TextEditingController(text: widget.profile.fullName);
+
     final TextEditingController initialsController =
         TextEditingController(text: widget.profile.avatarLetters);
+
     final TextEditingController phoneController =
         TextEditingController(text: widget.profile.phone);
 
@@ -1889,10 +1982,12 @@ class _ProfileTabState extends State<ProfileTab> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: <Widget>[
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'الاسم الكامل'),
+                  decoration: const InputDecoration(
+                    labelText: 'الاسم الكامل',
+                  ),
                 ),
                 TextField(
                   controller: initialsController,
@@ -1911,7 +2006,7 @@ class _ProfileTabState extends State<ProfileTab> {
               ],
             ),
           ),
-          actions: [
+          actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('إلغاء'),
@@ -1939,7 +2034,11 @@ class _ProfileTabState extends State<ProfileTab> {
 
                 widget.onProfileChanged();
                 Navigator.pop(dialogContext);
-                showAppSnackBar(context, 'تم تحديث الملف الشخصي.');
+
+                showAppSnackBar(
+                  context,
+                  'تم تحديث الملف الشخصي.',
+                );
               },
               child: const Text('حفظ'),
             ),
@@ -1960,7 +2059,7 @@ class _ProfileTabState extends State<ProfileTab> {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
-        children: [
+        children: <Widget>[
           const PageHeading(
             title: 'الملف والإعدادات',
             subtitle: 'هوية المستخدم والتحكم بالشكل واللغة الرقمية',
@@ -2011,7 +2110,7 @@ class _ProfileTabState extends State<ProfileTab> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
-              children: [
+              children: <Widget>[
                 SwitchListTile(
                   secondary: const Icon(Icons.dark_mode_rounded),
                   title: const Text('الوضع الداكن'),
@@ -2027,20 +2126,22 @@ class _ProfileTabState extends State<ProfileTab> {
                 ListTile(
                   leading: const Icon(Icons.text_fields_rounded),
                   title: const Text('هرمية الخط'),
-                  subtitle: Text(fontHierarchyLabel(widget.fontHierarchy)),
+                  subtitle: Text(
+                    fontHierarchyLabel(widget.fontHierarchy),
+                  ),
                   trailing: DropdownButton<FontHierarchy>(
                     value: widget.fontHierarchy,
                     underline: const SizedBox.shrink(),
-                    items: const [
-                      DropdownMenuItem(
+                    items: const <DropdownMenuItem<FontHierarchy>>[
+                      DropdownMenuItem<FontHierarchy>(
                         value: FontHierarchy.system,
                         child: Text('النظام'),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuItem<FontHierarchy>(
                         value: FontHierarchy.serif,
                         child: Text('Serif'),
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuItem<FontHierarchy>(
                         value: FontHierarchy.monospace,
                         child: Text('Monospace'),
                       ),
@@ -2056,7 +2157,9 @@ class _ProfileTabState extends State<ProfileTab> {
                 SwitchListTile(
                   secondary: const Icon(Icons.numbers_rounded),
                   title: const Text('الأرقام العربية'),
-                  subtitle: const Text('عرض المبالغ بالأرقام ١٢٣ بدلاً من 123'),
+                  subtitle: const Text(
+                    'عرض المبالغ بالأرقام ١٢٣ بدلاً من 123',
+                  ),
                   value: widget.useArabicNumerals,
                   onChanged: widget.onArabicNumeralsChanged,
                 ),
@@ -2074,8 +2177,11 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             ),
             child: const Row(
-              children: [
-                Icon(Icons.workspace_premium_rounded, color: Color(0xFF9A7000)),
+              children: <Widget>[
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFF9A7000),
+                ),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -2109,7 +2215,7 @@ class PageHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [
+      children: <Widget>[
         CircleAvatar(
           radius: 24,
           backgroundColor: AppColors.emerald.withOpacity(0.12),
@@ -2120,7 +2226,7 @@ class PageHeading extends StatelessWidget {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               Text(
                 title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -2182,8 +2288,12 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: AppColors.muted),
+        children: <Widget>[
+          Icon(
+            icon,
+            size: 48,
+            color: AppColors.muted,
+          ),
           const SizedBox(height: 12),
           Text(
             title,
@@ -2217,7 +2327,7 @@ class _DetailLine extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           style: DefaultTextStyle.of(context).style,
-          children: [
+          children: <TextSpan>[
             TextSpan(
               text: '$label: ',
               style: const TextStyle(fontWeight: FontWeight.w800),
@@ -2266,7 +2376,10 @@ String toArabicNumerals(String value) {
     '9': '٩',
   };
 
-  return value.split('').map((String char) => digits[char] ?? char).join();
+  return value
+      .split('')
+      .map((String char) => digits[char] ?? char)
+      .join();
 }
 
 double? parseFlexibleDouble(String value) {
@@ -2283,8 +2396,11 @@ double? parseFlexibleDouble(String value) {
   return double.tryParse(normalized);
 }
 
-String? normalizeYemeniPhone(String value) {
-  String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+String? normalizeYemeniPhone(String? value) {
+  String cleaned = (value ?? '').replaceAll(
+    RegExp(r'[^0-9]'),
+    '',
+  );
 
   if (cleaned.startsWith('00')) {
     cleaned = cleaned.substring(2);
@@ -2294,7 +2410,7 @@ String? normalizeYemeniPhone(String value) {
     cleaned = '967${cleaned.substring(1)}';
   }
 
-  if (!cleaned.startsWith('967') || cleaned.length < 11) {
+  if (!cleaned.startsWith('967') || cleaned.length != 12) {
     return null;
   }
 
