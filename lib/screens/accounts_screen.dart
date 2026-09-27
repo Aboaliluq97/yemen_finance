@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_colors.dart';
+import '../core/formatters.dart';
 import '../models/account_model.dart';
 import '../repositories/account_repository.dart';
 
@@ -171,7 +173,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: openingBalanceController,
-                      keyboardType: const TextInputType.numberWithOptions(
+                      keyboardType:
+                          const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
@@ -186,7 +189,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'وصف الحساب',
-                        hintText: 'مثال: حساب خاص بإدارة متجر الملابس',
+                        hintText:
+                            'مثال: حساب خاص بإدارة متجر الملابس',
                       ),
                     ),
                   ],
@@ -203,12 +207,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   onPressed: () async {
                     final String name = nameController.text.trim();
 
-                    final double? openingBalance = double.tryParse(
-                      openingBalanceController.text
-                          .trim()
-                          .replaceAll(',', '')
-                          .replaceAll('٬', '')
-                          .replaceAll('٫', '.'),
+                    final double? openingBalance =
+                        parseFinancialAmount(
+                      openingBalanceController.text,
                     );
 
                     if (name.isEmpty) {
@@ -236,7 +237,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       name: name,
                       accountType: selectedType,
                       currency: selectedCurrency,
-                      description: descriptionController.text.trim(),
+                      description:
+                          descriptionController.text.trim(),
                       openingBalance: openingBalance,
                       createdAt: now.toIso8601String(),
                       updatedAt: now.toIso8601String(),
@@ -389,7 +391,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: openingBalanceController,
-                      keyboardType: const TextInputType.numberWithOptions(
+                      keyboardType:
+                          const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
@@ -419,12 +422,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   onPressed: () async {
                     final String name = nameController.text.trim();
 
-                    final double? openingBalance = double.tryParse(
-                      openingBalanceController.text
-                          .trim()
-                          .replaceAll(',', '')
-                          .replaceAll('٬', '')
-                          .replaceAll('٫', '.'),
+                    final double? openingBalance =
+                        parseFinancialAmount(
+                      openingBalanceController.text,
                     );
 
                     if (name.isEmpty) {
@@ -450,7 +450,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       name: name,
                       accountType: selectedType,
                       currency: selectedCurrency,
-                      description: descriptionController.text.trim(),
+                      description:
+                          descriptionController.text.trim(),
                       openingBalance: openingBalance,
                       updatedAt:
                           DateTime.now().toIso8601String(),
@@ -524,7 +525,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.open_in_new_rounded),
+                leading: const Icon(
+                  Icons.open_in_new_rounded,
+                ),
                 title: const Text('فتح الحساب'),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -677,7 +680,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                           child: Card(
                             elevation: 0,
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius:
+                                  BorderRadius.circular(16),
                               onTap: () {
                                 widget.onOpenAccount(account);
                               },
@@ -689,12 +693,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                     const EdgeInsets.all(16),
                                 leading: CircleAvatar(
                                   radius: 25,
-                                  backgroundColor: AppColors.emerald
-                                      .withValues(alpha: 0.14),
+                                  backgroundColor:
+                                      AppColors.emerald.withValues(
+                                    alpha: 0.14,
+                                  ),
                                   foregroundColor:
                                       AppColors.emerald,
                                   child: const Icon(
-                                    Icons.account_balance_wallet_rounded,
+                                    Icons
+                                        .account_balance_wallet_rounded,
                                   ),
                                 ),
                                 title: Text(
@@ -709,7 +716,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                     top: 5,
                                   ),
                                   child: Text(
-                                    '${account.accountType} • ${account.currency}\n${account.description.isEmpty ? 'بدون وصف' : account.description}',
+                                    '${account.accountType} • ${account.currency}\n'
+                                    '${account.description.isEmpty ? 'بدون وصف' : account.description}',
                                   ),
                                 ),
                                 isThreeLine: true,
@@ -722,7 +730,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                     Text(
                                       formatAmount(
                                         account.openingBalance,
-                                        arabicDigits: false,
                                       ),
                                       style: const TextStyle(
                                         color: AppColors.emerald,
