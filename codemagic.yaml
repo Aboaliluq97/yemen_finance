@@ -1,32 +1,50 @@
 workflows:
-  default-workflow:
-    name: Yemen Finance Build
-    max_build_duration: 15
+  android-release-apk:
+    name: Muhasibi Universal Android Release APK
+
+    max_build_duration: 30
+
     instance_type: mac_mini_m2
+
     cache:
       cache_paths:
         - $FLUTTER_ROOT/.pub-cache
         - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+
     environment:
       flutter: stable
+
     triggering:
       events:
         - push
+
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
     scripts:
-      - name: Setup Flutter Project Structure
+      - name: Show Flutter and Dart versions
         script: |
-          echo "جاري تهيئة الهيكل الصافي والمتوافق لنظام الأرقم المالي..."
-          mkdir -p lib
-          if [ -f main.dart ]; then
-            mv main.dart lib/main.dart
-          fi
-          # تم تصحيح الأمر وحذف أي خيارات ملغية لتهيئة مشروع أندرويد سليم
-          flutter create . --platforms=android
-      - name: Flutter Packages Get
+          flutter --version
+          dart --version
+
+      - name: Get Flutter dependencies
         script: |
-          flutter packages get
-      - name: Build Android APK
+          flutter pub get
+
+      - name: Analyze Flutter project
+        script: |
+          flutter analyze
+
+      - name: Run Flutter tests
+        script: |
+          flutter test
+
+      - name: Build Android release APK
         script: |
           flutter build apk --release
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
