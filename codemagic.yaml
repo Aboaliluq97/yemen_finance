@@ -30,6 +30,15 @@ workflows:
           flutter --version
           dart --version
 
+      - name: Create Android platform if missing
+        script: |
+          if [ ! -d "android" ]; then
+            echo "Android platform folder is missing. Creating it now..."
+            flutter create . --platforms=android
+          else
+            echo "Android platform folder already exists."
+          fi
+
       - name: Get Flutter dependencies
         script: |
           flutter pub get
@@ -40,6 +49,7 @@ workflows:
 
       - name: Build Android release APK
         script: |
+          flutter clean
           flutter build apk --release
 
     artifacts:
