@@ -31,12 +31,12 @@ class _MuhasibiUniversalAppState
   final AppLockService _lockService =
       AppLockService.instance;
 
-  ThemeMode _themeMode = ThemeMode.light;
-  bool _useArabicDigits = false;
+  bool _loading = true;
+  bool _unlocked = false;
+  bool _shouldLockOnResume = false;
 
-  bool _isLoadingLockStatus = true;
-  bool _isApplicationUnlocked = false;
-  bool _mustLockOnResume = false;
+  ThemeMode _themeMode = ThemeMode.light;
+  bool _arabicDigits = false;
 
   @override
   void initState() {
@@ -44,7 +44,7 @@ class _MuhasibiUniversalAppState
 
     WidgetsBinding.instance.addObserver(this);
 
-    _prepareApplicationLock();
+    _checkLockStatus();
   }
 
   @override
@@ -54,8 +54,8 @@ class _MuhasibiUniversalAppState
     super.dispose();
   }
 
-  Future<void> _prepareApplicationLock() async {
-    final bool isLockEnabled =
+  Future<void> _checkLockStatus() async {
+    final bool enabled =
         await _lockService.isLockEnabled();
 
     if (!mounted) {
@@ -63,8 +63,8 @@ class _MuhasibiUniversalAppState
     }
 
     setState(() {
-      _isLoadingLockStatus = false;
-      _isApplicationUnlocked = !isLockEnabled;
+      _loading = false;
+      _unlocked = !enabled;
     });
   }
 
@@ -72,42 +72,40 @@ class _MuhasibiUniversalAppState
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      _mustLockOnResume = true;
+      _shouldLockOnResume = true;
     }
 
     if (state == AppLifecycleState.resumed &&
-        _mustLockOnResume) {
-      _lockApplicationWhenNeeded();
+        _shouldLockOnResume) {
+      _lockWhenNeeded();
     }
   }
 
-  Future<void> _lockApplicationWhenNeeded() async {
-    _mustLockOnResume = false;
+  Future<void> _lockWhenNeeded() async {
+    _shouldLockOnResume = false;
 
-    final bool isLockEnabled =
+    final bool enabled =
         await _lockService.isLockEnabled();
 
-    if (!mounted || !isLockEnabled) {
+    if (!mounted || !enabled) {
       return;
     }
 
     setState(() {
-      _isApplicationUnlocked = false;
+      _unlocked = false;
     });
   }
 
-  void _unlockApplication() {
+  void _unlock() {
     setState(() {
-      _isApplicationUnlocked = true;
+      _unlocked = true;
     });
   }
 
-  ThemeData _buildTheme({
-    required Brightness brightness,
-  }) {
+  ThemeData _theme(Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
 
     return ThemeData(
@@ -121,55 +119,20 @@ class _MuhasibiUniversalAppState
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBarTheme: AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: isDark
             ? Colors.white
             : AppColors.ink,
+        elevation: 0,
       ),
       cardTheme: CardThemeData(
         color: isDark
             ? const Color(0xFF192523)
             : Colors.white,
         elevation: 0,
-        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
         ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: isDark
-            ? const Color(0xFF192523)
-            : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark
-                ? Colors.white24
-                : Colors.black12,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.emerald,
-            width: 1.5,
-          ),
-        ),
-      ),
-      floatingActionButtonTheme:
-          const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.emerald,
-        foregroundColor: Colors.white,
       ),
     );
   }
@@ -180,12 +143,8 @@ class _MuhasibiUniversalAppState
       debugShowCheckedModeBanner: false,
       title: 'محاسبي الشامل',
       themeMode: _themeMode,
-      theme: _buildTheme(
-        brightness: Brightness.light,
-      ),
-      darkTheme: _buildTheme(
-        brightness: Brightness.dark,
-      ),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
       builder: (
         BuildContext context,
         Widget? child,
@@ -195,56 +154,55 @@ class _MuhasibiUniversalAppState
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: _isLoadingLockStatus
+      home: _loading
           ? const Scaffold(
               body: Center(
                 child: CircularProgressIndicator(),
               ),
             )
-          : _isApplicationUnlocked
-              ? MuhasibiHomeScreen(
+          : _unlocked
+              ? HomeScreen(
                   themeMode: _themeMode,
-                  useArabicDigits: _useArabicDigits,
+                  arabicDigits: _arabicDigits,
                   onThemeChanged: (ThemeMode value) {
                     setState(() {
                       _themeMode = value;
                     });
                   },
-                  onArabicDigitsChanged: (bool value) {
+                  onArabicDigitsChanged: (
+                    bool value,
+                  ) {
                     setState(() {
-                      _useArabicDigits = value;
+                      _arabicDigits = value;
                     });
                   },
                 )
               : AppLockScreen(
-                  onUnlocked: _unlockApplication,
+                  onUnlocked: _unlock,
                 ),
     );
   }
 }
 
-class MuhasibiHomeScreen extends StatefulWidget {
-  const MuhasibiHomeScreen({
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({
     super.key,
     required this.themeMode,
-    required this.useArabicDigits,
+    required this.arabicDigits,
     required this.onThemeChanged,
     required this.onArabicDigitsChanged,
   });
 
   final ThemeMode themeMode;
-  final bool useArabicDigits;
-
+  final bool arabicDigits;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<bool> onArabicDigitsChanged;
 
   @override
-  State<MuhasibiHomeScreen> createState() =>
-      _MuhasibiHomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _MuhasibiHomeScreenState
-    extends State<MuhasibiHomeScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   void _openAccount(AccountModel account) {
@@ -254,7 +212,7 @@ class _MuhasibiHomeScreenState
         builder: (BuildContext context) {
           return AccountDetailsScreen(
             account: account,
-            useArabicDigits: widget.useArabicDigits,
+            arabicDigits: widget.arabicDigits,
           );
         },
       ),
@@ -265,7 +223,7 @@ class _MuhasibiHomeScreenState
   Widget build(BuildContext context) {
     final List<Widget> pages = <Widget>[
       DashboardScreen(
-        useArabicDigits: widget.useArabicDigits,
+        arabicDigits: widget.arabicDigits,
         onOpenAccounts: () {
           setState(() {
             _selectedIndex = 1;
@@ -279,7 +237,7 @@ class _MuhasibiHomeScreenState
       const ReportsScreen(),
       SettingsScreen(
         themeMode: widget.themeMode,
-        useArabicDigits: widget.useArabicDigits,
+        arabicDigits: widget.arabicDigits,
         onThemeChanged: widget.onThemeChanged,
         onArabicDigitsChanged:
             widget.onArabicDigitsChanged,
@@ -292,8 +250,8 @@ class _MuhasibiHomeScreenState
         children: pages,
       ),
       bottomNavigationBar: NavigationBar(
-        height: 78,
         selectedIndex: _selectedIndex,
+        height: 78,
         labelBehavior:
             NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (int index) {
@@ -340,11 +298,11 @@ class _MuhasibiHomeScreenState
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,
-    required this.useArabicDigits,
+    required this.arabicDigits,
     required this.onOpenAccounts,
   });
 
-  final bool useArabicDigits;
+  final bool arabicDigits;
   final VoidCallback onOpenAccounts;
 
   @override
@@ -353,306 +311,221 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final AccountRepository _accountRepository =
+  final AccountRepository _repository =
       AccountRepository.instance;
 
-  bool _isLoading = true;
-  List<AccountModel> _accounts = <AccountModel>[];
+  late Future<List<AccountModel>> _accountsFuture;
 
   @override
   void initState() {
     super.initState();
 
-    _loadDashboard();
+    _accountsFuture = _repository.getAllAccounts();
   }
 
-  Future<void> _loadDashboard() async {
+  Future<void> _refresh() async {
     setState(() {
-      _isLoading = true;
+      _accountsFuture = _repository.getAllAccounts();
     });
 
-    final List<AccountModel> accounts =
-        await _accountRepository.getAllAccounts();
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _accounts = accounts;
-      _isLoading = false;
-    });
-  }
-
-  double get _totalOpeningBalance {
-    return _accounts.fold<double>(
-      0.0,
-      (
-        double total,
-        AccountModel account,
-      ) {
-        return total + account.openingBalance;
-      },
-    );
+    await _accountsFuture;
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _loadDashboard,
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  20,
-                  20,
-                  110,
+      child: FutureBuilder<List<AccountModel>>(
+        future: _accountsFuture,
+        builder: (
+          BuildContext context,
+          AsyncSnapshot<List<AccountModel>> snapshot,
+        ) {
+          if (snapshot.connectionState ==
+              ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          final List<AccountModel> accounts =
+              snapshot.data ?? <AccountModel>[];
+
+          final double total = accounts.fold<double>(
+            0.0,
+            (
+              double currentTotal,
+              AccountModel account,
+            ) {
+              return currentTotal +
+                  account.openingBalance;
+            },
+          );
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                110,
+              ),
+              children: <Widget>[
+                const Text(
+                  'الرئيسية',
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                children: <Widget>[
-                  const Text(
-                    'الرئيسية',
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                    ),
+                const SizedBox(height: 4),
+                const Text(
+                  'نظرة سريعة على حساباتك وأرصدتك.',
+                  style: TextStyle(
+                    color: AppColors.muted,
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'نظرة سريعة على حساباتك وأرصدتك.',
-                    style: TextStyle(
-                      color: AppColors.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                        colors: <Color>[
-                          AppColors.emerald,
-                          AppColors.emeraldDark,
-                        ],
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text(
-                          'إجمالي الرصيد الافتتاحي',
-                          style: TextStyle(
-                            color: Color(0xFFD5F5EA),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          formatAmount(
-                            _totalOpeningBalance,
-                            arabicDigits:
-                                widget.useArabicDigits,
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'سيتم تحديث الرصيد تلقائيًا عند إضافة الدخل والمصروف والتحويلات.',
-                          style: TextStyle(
-                            color: Color(0xFFD5F5EA),
-                            height: 1.4,
-                          ),
-                        ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: const LinearGradient(
+                      colors: <Color>[
+                        AppColors.emerald,
+                        AppColors.emeraldDark,
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: _SummaryCard(
-                          icon: Icons.account_balance_wallet_rounded,
-                          title: 'الحسابات',
-                          value: _accounts.length.toString(),
-                          color: AppColors.emerald,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: _SummaryCard(
-                          icon: Icons.receipt_long_rounded,
-                          title: 'العمليات',
-                          value: '0',
-                          color: AppColors.gold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: <Widget>[
                       const Text(
-                        'أحدث الحسابات',
+                        'إجمالي الرصيد الافتتاحي',
                         style: TextStyle(
-                          fontSize: 20,
+                          color: Color(0xFFD5F5EA),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        formatAmount(
+                          total,
+                          arabicDigits: widget.arabicDigits,
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      TextButton(
-                        onPressed: widget.onOpenAccounts,
-                        child: const Text(
-                          'عرض الحسابات',
+                      const SizedBox(height: 8),
+                      Text(
+                        'عدد الحسابات: ${accounts.length}',
+                        style: const TextStyle(
+                          color: Color(0xFFD5F5EA),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (_accounts.isEmpty)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
-                          children: <Widget>[
-                            const Icon(
-                              Icons.account_balance_wallet_outlined,
-                              size: 48,
-                              color: AppColors.muted,
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    const Text(
+                      'أحدث الحسابات',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: widget.onOpenAccounts,
+                      child: const Text('عرض الكل'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (accounts.isEmpty)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        children: <Widget>[
+                          const Icon(
+                            Icons
+                                .account_balance_wallet_outlined,
+                            size: 52,
+                            color: AppColors.muted,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'لا توجد حسابات بعد',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'لا توجد حسابات بعد',
-                              style: TextStyle(
+                          ),
+                          const SizedBox(height: 10),
+                          FilledButton(
+                            onPressed: widget.onOpenAccounts,
+                            child: const Text(
+                              'إنشاء حساب',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...accounts.take(5).map(
+                    (AccountModel account) {
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: 10,
+                        ),
+                        child: Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor:
+                                  AppColors.emerald,
+                              foregroundColor: Colors.white,
+                              child: Icon(
+                                Icons
+                                    .account_balance_wallet_rounded,
+                              ),
+                            ),
+                            title: Text(
+                              account.name,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'أنشئ حسابك الأول من تبويب الحسابات.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppColors.muted,
+                            subtitle: Text(
+                              '${account.accountType} • ${account.currency}',
+                            ),
+                            trailing: Text(
+                              formatAmount(
+                                account.openingBalance,
+                                arabicDigits:
+                                    widget.arabicDigits,
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.emerald,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: widget.onOpenAccounts,
-                              child: const Text(
-                                'الذهاب إلى الحسابات',
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    )
-                  else
-                    ..._accounts.take(5).map(
-                      (AccountModel account) {
-                        return Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: 10,
-                          ),
-                          child: Card(
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    AppColors.emerald.withValues(
-                                  alpha: 0.14,
-                                ),
-                                foregroundColor:
-                                    AppColors.emerald,
-                                child: const Icon(
-                                  Icons
-                                      .account_balance_wallet_rounded,
-                                ),
-                              ),
-                              title: Text(
-                                account.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '${account.accountType} • ${account.currency}',
-                              ),
-                              trailing: Text(
-                                formatAmount(
-                                  account.openingBalance,
-                                  arabicDigits:
-                                      widget.useArabicDigits,
-                                ),
-                                style: const TextStyle(
-                                  color: AppColors.emerald,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  const BrandFooter(),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(
-              icon,
-              color: color,
+                      );
+                    },
+                  ),
+                const BrandFooter(),
+              ],
             ),
-            const SizedBox(height: 14),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.muted,
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -662,11 +535,11 @@ class AccountDetailsScreen extends StatelessWidget {
   const AccountDetailsScreen({
     super.key,
     required this.account,
-    required this.useArabicDigits,
+    required this.arabicDigits,
   });
 
   final AccountModel account;
-  final bool useArabicDigits;
+  final bool arabicDigits;
 
   @override
   Widget build(BuildContext context) {
@@ -683,8 +556,6 @@ class AccountDetailsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
                   colors: <Color>[
                     AppColors.emerald,
                     AppColors.emeraldDark,
@@ -695,37 +566,29 @@ class AccountDetailsScreen extends StatelessWidget {
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Text(
-                    'الحساب المفتوح',
-                    style: TextStyle(
-                      color: Color(0xFFD5F5EA),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Text(
                     account.name,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 27,
+                      fontSize: 26,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     '${account.accountType} • ${account.currency}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFD5F5EA),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'الرصيد الافتتاحي: ${formatAmount(
                       account.openingBalance,
-                      arabicDigits: useArabicDigits,
+                      arabicDigits: arabicDigits,
                     )}',
                     style: const TextStyle(
-                      color: Color(0xFFD5F5EA),
+                      color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -733,19 +596,11 @@ class AccountDetailsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 22),
-            const Text(
-              'الأقسام والعمليات',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Card(
+            const Card(
               child: Padding(
-                padding: const EdgeInsets.all(22),
+                padding: EdgeInsets.all(22),
                 child: Column(
-                  children: const <Widget>[
+                  children: <Widget>[
                     Icon(
                       Icons.folder_open_rounded,
                       size: 52,
@@ -753,15 +608,14 @@ class AccountDetailsScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'إدارة الأقسام ستضاف في التحديث التالي',
-                      textAlign: TextAlign.center,
+                      'الأقسام والعمليات',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    SizedBox(height: 7),
                     Text(
-                      'المرحلة التالية ستضيف إنشاء الأقسام وإضافة عمليات الدخل والمصروف والتحويل داخل كل حساب.',
+                      'سيتم في المرحلة التالية إضافة الأقسام وعمليات الدخل والمصروف والتحويل داخل هذا الحساب.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.muted,
@@ -787,35 +641,9 @@ class OperationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const SafeArea(
       child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 64,
-                color: AppColors.muted,
-              ),
-              SizedBox(height: 14),
-              Text(
-                'العمليات المالية',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'سيتم هنا تسجيل الدخل والمصروف والتحويلات وربطها بالأقسام.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.muted,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
+        child: Text(
+          'العمليات المالية ستظهر هنا بعد إضافة الأقسام.',
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -829,35 +657,9 @@ class ReportsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const SafeArea(
       child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.bar_chart_outlined,
-                size: 64,
-                color: AppColors.muted,
-              ),
-              SizedBox(height: 14),
-              Text(
-                'التقارير والجداول',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'سيتم هنا عرض التقارير وتصدير PDF وCSV ومشاركة الملفات.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.muted,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
+        child: Text(
+          'التقارير ستظهر هنا بعد إضافة العمليات المالية.',
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -868,14 +670,13 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.themeMode,
-    required this.useArabicDigits,
+    required this.arabicDigits,
     required this.onThemeChanged,
     required this.onArabicDigitsChanged,
   });
 
   final ThemeMode themeMode;
-  final bool useArabicDigits;
-
+  final bool arabicDigits;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<bool> onArabicDigitsChanged;
 
@@ -884,30 +685,27 @@ class SettingsScreen extends StatefulWidget {
       _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState
+    extends State<SettingsScreen> {
   final AppLockService _lockService =
       AppLockService.instance;
 
-  bool _isLoadingSecurity = true;
-  bool _isLockEnabled = false;
-  bool _isBiometricsEnabled = false;
-  bool _isBiometricsAvailable = false;
+  bool _loadingSecurity = true;
+  bool _lockEnabled = false;
+  bool _biometricAvailable = false;
 
   @override
   void initState() {
     super.initState();
 
-    _loadSecurityStatus();
+    _loadSecurity();
   }
 
-  Future<void> _loadSecurityStatus() async {
-    final bool isLockEnabled =
+  Future<void> _loadSecurity() async {
+    final bool enabled =
         await _lockService.isLockEnabled();
 
-    final bool isBiometricsEnabled =
-        await _lockService.isBiometricsEnabled();
-
-    final bool isBiometricsAvailable =
+    final bool biometricAvailable =
         await _lockService.canUseBiometrics();
 
     if (!mounted) {
@@ -915,23 +713,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     setState(() {
-      _isLockEnabled = isLockEnabled;
-      _isBiometricsEnabled = isBiometricsEnabled;
-      _isBiometricsAvailable =
-          isBiometricsAvailable;
-      _isLoadingSecurity = false;
+      _lockEnabled = enabled;
+      _biometricAvailable = biometricAvailable;
+      _loadingSecurity = false;
     });
   }
 
-  Future<void> _showEnableLockDialog() async {
+  Future<void> _enableLock() async {
     final TextEditingController pinController =
         TextEditingController();
 
-    final TextEditingController confirmPinController =
+    final TextEditingController confirmController =
         TextEditingController();
 
-    bool enableBiometrics =
-        _isBiometricsAvailable;
+    bool useBiometrics = _biometricAvailable;
 
     await showDialog<void>(
       context: context,
@@ -950,49 +745,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     const Text(
-                      'أنشئ رمزًا سريًا من 4 إلى 6 أرقام. ستستخدمه عند عدم توفر البصمة.',
-                      style: TextStyle(
-                        color: AppColors.muted,
-                        height: 1.5,
-                      ),
+                      'أنشئ رمزًا سريًا من 4 إلى 6 أرقام.',
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: pinController,
                       obscureText: true,
-                      maxLength: 6,
                       keyboardType: TextInputType.number,
+                      maxLength: 6,
                       decoration: const InputDecoration(
                         labelText: 'الرمز السري',
-                        hintText: '4 إلى 6 أرقام',
                         counterText: '',
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
-                      controller: confirmPinController,
+                      controller: confirmController,
                       obscureText: true,
-                      maxLength: 6,
                       keyboardType: TextInputType.number,
+                      maxLength: 6,
                       decoration: const InputDecoration(
-                        labelText: 'تأكيد الرمز السري',
+                        labelText: 'تأكيد الرمز',
                         counterText: '',
                       ),
                     ),
-                    if (_isBiometricsAvailable)
+                    if (_biometricAvailable)
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text(
-                          'السماح بالفتح بالبصمة',
+                          'تفعيل البصمة',
                         ),
-                        subtitle: const Text(
-                          'يمكنك دائمًا استخدام الرمز السري',
-                        ),
-                        value: enableBiometrics,
+                        value: useBiometrics,
                         onChanged: (bool? value) {
                           setDialogState(() {
-                            enableBiometrics =
-                                value ?? false;
+                            useBiometrics = value ?? false;
                           });
                         },
                       ),
@@ -1011,34 +797,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     final String pin =
                         pinController.text.trim();
 
-                    final String confirmPin =
-                        confirmPinController.text.trim();
+                    final String confirm =
+                        confirmController.text.trim();
 
-                    final bool isValidPin =
-                        RegExp(r'^\d{4,6}$').hasMatch(
-                      pin,
-                    );
-
-                    if (!isValidPin) {
-                      _showMessage(
-                        'الرمز السري يجب أن يكون من 4 إلى 6 أرقام.',
-                        isError: true,
-                      );
+                    if (!RegExp(r'^\d{4,6}$')
+                        .hasMatch(pin)) {
                       return;
                     }
 
-                    if (pin != confirmPin) {
-                      _showMessage(
-                        'الرمزان السريان غير متطابقين.',
-                        isError: true,
-                      );
+                    if (pin != confirm) {
                       return;
                     }
 
                     await _lockService.enableLock(
                       pinCode: pin,
-                      enableBiometrics:
-                          enableBiometrics,
+                      enableBiometrics: useBiometrics,
                     );
 
                     if (!mounted) {
@@ -1047,13 +820,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                     Navigator.pop(dialogContext);
 
-                    await _loadSecurityStatus();
-
-                    _showMessage(
-                      'تم تفعيل قفل التطبيق بنجاح.',
-                    );
+                    await _loadSecurity();
                   },
-                  child: const Text('تفعيل القفل'),
+                  child: const Text('تفعيل'),
                 ),
               ],
             );
@@ -1063,71 +832,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     pinController.dispose();
-    confirmPinController.dispose();
+    confirmController.dispose();
   }
 
   Future<void> _disableLock() async {
-    final bool? confirmed =
-        await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('إيقاف قفل التطبيق'),
-          content: const Text(
-            'سيصبح التطبيق متاحًا دون بصمة أو رمز سري. هل تريد المتابعة؟',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('إيقاف القفل'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
     await _lockService.disableLock();
 
-    await _loadSecurityStatus();
-
-    _showMessage(
-      'تم إيقاف قفل التطبيق.',
-    );
-  }
-
-  void _showMessage(
-    String message, {
-    bool isError = false,
-  }) {
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor:
-              isError ? AppColors.danger : AppColors.emerald,
-          content: Text(message),
-        ),
-      );
+    await _loadSecurity();
   }
 
   @override
@@ -1145,3 +856,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'مركز التحكم',
             style: TextStyle(
               fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Card(
+            child: Column(
+              children: <Widget>[
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.dark_mode_rounded,
+                  ),
+                  title: const Text('الوضع الداكن'),
+                  value:
+                      widget.themeMode == ThemeMode.dark,
+                  onChanged: (bool value) {
+                    widget.onThemeChanged(
+                      value
+                          ? ThemeMode.dark
+                          : ThemeMode.light,
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.numbers_rounded,
+                  ),
+                  title: const Text('الأرقام العربية'),
+                  value: widget.arabicDigits,
+                  onChanged:
+                      widget.onArabicDigitsChanged,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'الأمان وقفل التطبيق',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: _loadingSecurity
+                ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : ListTile(
+                    leading: Icon(
+                      _lockEnabled
+                          ? Icons.lock_rounded
+                          : Icons.lock_open_rounded,
+                      color: _lockEnabled
+                          ? AppColors.emerald
+                          : AppColors.muted,
+                    ),
+                    title: Text(
+                      _lockEnabled
+                          ? 'قفل التطبيق مفعّل'
+                          : 'قفل التطبيق غير مفعّل',
+                    ),
+                    subtitle: Text(
+                      _lockEnabled
+                          ? 'سيتم طلب البصمة أو الرمز عند العودة للتطبيق.'
+                          : 'فعّل القفل لحماية بياناتك المالية.',
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_left_rounded,
+                    ),
+                    onTap: _lockEnabled
+                        ? _disableLock
+                        : _enableLock,
+                  ),
+          ),
+          const BrandFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class BrandFooter extends StatelessWidget {
+  const BrandFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(
+        vertical: 28,
+      ),
+      child: Text(
+        '© 2026 جميع الحقوق محفوظة لـ محاسبي الشامل | صُنع وتم الابتكار بواسطة ABOALILUQMAN — أبو علي لقمان',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.muted,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          height: 1.6,
+        ),
+      ),
+    );
+  }
+}
