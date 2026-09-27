@@ -1,8 +1,8 @@
 workflows:
   android-release-apk:
-    name: Muhasibi Universal Android Release APK
+    name: Muhasibi Universal Secure Android APK
 
-    max_build_duration: 30
+    max_build_duration: 45
 
     instance_type: mac_mini_m2
 
@@ -25,19 +25,111 @@ workflows:
           source: true
 
     scripts:
-      - name: Show Flutter version
+      - name: Show Flutter and Dart versions
         script: |
           flutter --version
           dart --version
 
-      - name: Create Android platform if missing
+      - name: Create Android platform
         script: |
           if [ ! -d "android" ]; then
-            echo "Android platform folder is missing. Creating it now..."
+            echo "Creating the missing Android platform..."
             flutter create . --platforms=android
           else
-            echo "Android platform folder already exists."
+            echo "Android platform is already available."
           fi
+
+      - name: Configure Android for biometrics
+        script: |
+          set -e
+
+          echo "Configuring Android biometric authentication..."
+
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+
+          python3 - <<'PYTHON'
+          from pathlib import Path
+
+          manifest_path = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest_path.read_text(encoding="utf-8")
+
+          permissions = """
+              <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+          """
+
+          if "android.permission.USE_BIOMETRIC" not in content:
+              marker = '>'
+              first_line_end = content.find(marker)
+              content = (
+                  content[:first_line_end + 1]
+                  + permissions
+                  + content[first_line_end + 1:]
+              )
+
+          manifest_path.write_text(content, encoding="utf-8")
+          PYTHON
+
+          MAIN_ACTIVITY_FILE=$(find android/app/src/main/kotlin -name "MainActivity.kt" | head -n 1)
+
+          if [ -z "$MAIN_ACTIVITY_FILE" ]; then
+            echo "MainActivity.kt was not found."
+            exit 1
+          fi
+
+          PACKAGE_NAME=$(grep "^package " "$MAIN_ACTIVITY_FILE" | sed "s/package //")
+
+          cat > "$MAIN_ACTIVITY_FILE" <<EOF
+          package $PACKAGE_NAME
+
+          import io.flutter.embedding.android.FlutterFragmentActivity
+
+          class MainActivity : FlutterFragmentActivity()
+          EOF
+
+          if [ -f "android/app/build.gradle.kts" ]; then
+            python3 - <<'PYTHON'
+          from pathlib import Path
+
+          gradle_path = Path("android/app/build.gradle.kts")
+          content = gradle_path.read_text(encoding="utf-8")
+
+          content = content.replace(
+              "minSdk = flutter.minSdkVersion",
+              "minSdk = 24",
+          )
+
+          content = content.replace(
+              "minSdkVersion flutter.minSdkVersion",
+              "minSdkVersion 24",
+          )
+
+          gradle_path.write_text(content, encoding="utf-8")
+          PYTHON
+          fi
+
+          if [ -f "android/app/build.gradle" ]; then
+            python3 - <<'PYTHON'
+          from pathlib import Path
+
+          gradle_path = Path("android/app/build.gradle")
+          content = gradle_path.read_text(encoding="utf-8")
+
+          content = content.replace(
+              "minSdkVersion flutter.minSdkVersion",
+              "minSdkVersion 24",
+          )
+
+          content = content.replace(
+              "minSdk flutter.minSdkVersion",
+              "minSdk 24",
+          )
+
+          gradle_path.write_text(content, encoding="utf-8")
+          PYTHON
+          fi
+
+          echo "Android biometric configuration completed."
 
       - name: Get Flutter dependencies
         script: |
@@ -47,9 +139,10 @@ workflows:
         script: |
           flutter analyze || true
 
-      - name: Build Android release APK
+      - name: Build secure Android release APK
         script: |
           flutter clean
+          flutter pub get
           flutter build apk --release
 
     artifacts:
