@@ -2,7 +2,7 @@ name: muhasibi_alshamel
 description: تطبيق محاسبي الشامل لإدارة الحسابات والأقسام والعمليات المالية.
 publish_to: "none"
 
-version: 1.0.0+27
+version: 1.0.0+28
 
 environment:
   sdk: ">=3.7.0 <4.0.0"
@@ -17,7 +17,7 @@ dependencies:
   path: ^1.9.1
 
   local_auth: ^3.0.2
-  flutter_secure_storage: ^11.2.0
+  flutter_secure_storage: ^10.3.4
 
   shared_preferences: ^2.5.3
 
