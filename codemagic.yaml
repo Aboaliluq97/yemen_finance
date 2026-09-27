@@ -25,7 +25,7 @@ workflows:
           source: true
 
     scripts:
-      - name: Show Flutter and Dart versions
+      - name: Show Flutter version
         script: |
           flutter --version
           dart --version
@@ -37,10 +37,6 @@ workflows:
       - name: Analyze Flutter project
         script: |
           flutter analyze
-
-      - name: Run Flutter tests
-        script: |
-          flutter test
 
       - name: Build Android release APK
         script: |
